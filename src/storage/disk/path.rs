@@ -41,4 +41,7 @@ impl PathBuilder {
     pub fn table_index(&self, db_name: &str, schema_name: &str, table_name: &str, property: &str) -> PathBuf {
         self.table_dir(db_name, schema_name, table_name).join(format!("idx_{}_{}.dat", property, table_name))
     }
+    pub fn function_file(&self, db_name: &str, schema_name: &str, table_name: &str, function_name: &str) -> PathBuf {
+        self.schema_dir(db_name, schema_name).join(format!("fn_{}_{}.dat", function_name, table_name))
+    }
 }
