@@ -1,0 +1,16 @@
+[package]
+name = "DBMS"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+uuid = "1.16.0"
+sqlparser = "0.56.0"
+chrono = { version = "0.4.41", features = ["serde"]}
+serde = { version = "1.0.219", features = ["derive"] }
+bincode = { version = "2.0.1", features = ["serde"]}
+thiserror = { version = "2.0.12"}
+pyo3 = { version = "0.24.2", features = ["auto-initialize"] }
+
+[package.metadata.maturin]
+python-interpreter = "C:\\Program Files\\Python313\\python.exe"
