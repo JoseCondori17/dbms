@@ -147,7 +147,7 @@ impl CatalogManager {
         let config = bincode::config::standard().with_little_endian();
         
         let (mut schema_meta, _) : (Schema, _) = bincode::serde::decode_from_slice(&buffer, config)?;
-        schema_meta.add_table(table_name.to_string(), 1); // change
+        schema_meta.add_table(table_name.to_string(), self.generate_table_id(db_name, schema_name)); // change
         // write table - metadata
         let schema_data = bincode::serde::encode_to_vec(schema_meta, config)?;
         let mut file = self.file_manager.open_file(path_sh_meta.as_path(), false)?;
@@ -214,11 +214,37 @@ impl CatalogManager {
         max_id + 1
     }
     fn generate_table_id(&self, db_name: &str, schema_name: &str) -> u32 {
-        let max_id = 0;
+        let mut max_id = 0;
+        let path_schema = self.path_builder.schema_meta(db_name, schema_name);
+        
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut file = self.file_manager.open_file(path_schema.as_path(), true).unwrap();
+        file.read_to_end(&mut buffer).unwrap();
+        
+        let config = bincode::config::standard().with_little_endian();
+        let (schema_meta, _) : (Schema, _) = bincode::serde::decode_from_slice(&buffer, config).unwrap();
+        for table_id in schema_meta.get_tables().values() {
+            if *table_id > max_id {
+                max_id = *table_id;
+            }
+        }
         max_id + 1
     }
     fn generate_function_id(&self, db_name: &str, schema_name: &str) -> u32 {
-        let max_id = 0;
+        let mut max_id = 0;
+        let path_schema = self.path_builder.schema_meta(db_name, schema_name);
+
+        let mut buffer: Vec<u8> = Vec::new();
+        let mut file = self.file_manager.open_file(path_schema.as_path(), true).unwrap();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let config = bincode::config::standard().with_little_endian();
+        let (schema_meta, _) : (Schema, _) = bincode::serde::decode_from_slice(&buffer, config).unwrap();
+        for table_id in schema_meta.get_functions().values() {
+            if *table_id > max_id {
+                max_id = *table_id;
+            }
+        }
         max_id + 1
     }
 }

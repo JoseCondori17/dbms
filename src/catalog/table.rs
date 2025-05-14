@@ -1,12 +1,14 @@
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 use crate::catalog::column::Column;
-use crate::catalog::constraint::Constraint;
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Table {
-    id: u32,
-    name: String,
-    schema_id: u32,
-    columns: Vec<Column>,
-    primary_key: Option<Vec<String>>,
-    //constrains: Vec<Constraint>,
-    heap_file_path: PathBuf
+    rel_id: u32,
+    tab_name: String,
+    tab_schema_id: u32,
+    tab_columns: Vec<Column>,
+    //tab_constrains: Vec<Constraint>,
+    tab_primary_key: u8,
+    tab_file_path: PathBuf
 }

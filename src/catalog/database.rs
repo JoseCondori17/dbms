@@ -4,42 +4,44 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Database {
-    id: u32,
-    name: String,
-    schemas: HashMap<String, u32>, // ref u32: table id
-    created_at: DateTime<Utc>,
+    db_id: u32,
+    db_name: String,
+    db_schemas: HashMap<String, u32>, // ref u32: table id
+    db_created_at: DateTime<Utc>,
 }
 
 impl Database {
     pub fn new(id: u32, name: String) -> Self {
         Self {
-            id,
-            name,
-            schemas: HashMap::new(),
-            created_at: Utc::now(),
+            db_id: id,
+            db_name: name,
+            db_schemas: HashMap::new(),
+            db_created_at: Utc::now(),
         }
     }
+    
     // GETTERS
     pub fn get_id(&self) -> u32 {
-        self.id
+        self.db_id
     }
     pub fn get_name(&self) -> &str {
-        &self.name
+        &self.db_name
     }
     pub fn get_schemas(&self) -> &HashMap<String, u32> {
-        &self.schemas
+        &self.db_schemas
     }
     pub fn get_created_at(&self) -> &DateTime<Utc> {
-        &self.created_at
+        &self.db_created_at
     }
+    
     // METHODS
     pub fn add_schema(&mut self, name: String, id: u32) {
-        self.schemas.insert(name, id);
+        self.db_schemas.insert(name, id);
     }
     pub fn delete_schema(&mut self, name: String, id: u32) {
-        self.schemas.remove(&name);
+        self.db_schemas.remove(&name);
     }
     pub fn get_schema_id(&self, name: &str) -> Option<&u32> {
-        self.schemas.get(name)
+        self.db_schemas.get(name)
     }
 }   
