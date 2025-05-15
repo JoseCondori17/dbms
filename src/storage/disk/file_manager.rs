@@ -1,7 +1,8 @@
 use std::fs::{remove_dir_all, remove_file, create_dir, OpenOptions, File};
 use serde::{Deserialize, Serialize};
-use std::io::{Result};
+use std::io::{Read, Result, Write};
 use std::path::{Path, PathBuf};
+use serde::de::DeserializeOwned;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FileManager {
@@ -49,5 +50,27 @@ impl FileManager {
     pub fn path_exists(&self, path: &Path) -> bool {
         let full_path = self.base_path.join(path);
         full_path.exists()
+    }
+    
+    pub fn read_data<T>(&self, path: &Path) -> Option<T> 
+    where T: DeserializeOwned
+    {
+        let mut file = self.open_file(path, true).unwrap();
+        let mut buffer: Vec<u8> = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let config = bincode::config::standard();
+        let (data_bin, _): (T, _) = bincode::serde::decode_from_slice(&buffer, config).unwrap();
+        Some(data_bin)
+    }
+
+    pub fn write_data<T>(&self, data: &T, path: &Path) 
+    where T: Serialize
+    {
+        let mut file = self.open_file(path, false).unwrap();
+        let config = bincode::config::standard();
+        let data_encode = bincode::serde::encode_to_vec(data, config).unwrap();
+        file.write_all(&data_encode).unwrap();
+        file.flush().unwrap();
     }
 }
