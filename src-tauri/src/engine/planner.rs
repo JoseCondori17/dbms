@@ -15,4 +15,4 @@ pub fn genera_logic_plans(statements: Vec<Statement>, catalog: &CatalogManager) 
         plans.push(plan);
     }
     plans
-} 
+}

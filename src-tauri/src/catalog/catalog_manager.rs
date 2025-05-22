@@ -66,8 +66,12 @@ impl CatalogManager {
 
         Ok(catalog_manager)
     }
-
-    // SAVE GLOBAL DATA
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    pub fn get_global_catalog(&self) -> &GlobalCatalog { &self.global_catalog }
+    pub fn get_system_catalog_path(&self) -> &PathBuf { &self.system_catalog_path }
+    pub fn get_file_manager(&self) -> &FileManager { &self.file_manager }
+    pub fn get_path_builder(&self) -> &PathBuilder { &self.path_builder }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     pub fn load_catalog(&mut self) -> Result<(), CatalogError> {
         let global_catalog: GlobalCatalog = self.file_manager.read_data(self.system_catalog_path.as_path()).unwrap();
         self.global_catalog = global_catalog;
@@ -82,7 +86,7 @@ impl CatalogManager {
         Ok(())
     }
 
-    // CREATE FUNCTIONS
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     pub fn create_database(&mut self, db_name: &str) -> Result<(), CatalogError> {
         let path_db = self.path_builder.database_dir(db_name);
         let path_db_meta = self.path_builder.database_meta(db_name);
@@ -125,11 +129,11 @@ impl CatalogManager {
         Ok(())
     }
     pub fn create_table(&mut self, 
-                        db_name: &str, 
-                        schema_name: &str, 
-                        table_name: &str, 
-                        columns: Vec<Column>, 
-                        indexes: Vec<Index>
+                        db_name     : &str, 
+                        schema_name : &str, 
+                        table_name  : &str, 
+                        columns     : Vec<Column>, 
+                        indexes     : Vec<Index>
     ) -> Result<(), CatalogError> {
         let path_table = self.path_builder.table_dir(db_name, schema_name, table_name);
         let path_table_data = self.path_builder.table_data(db_name, schema_name, table_name);
@@ -168,18 +172,27 @@ impl CatalogManager {
         self.file_manager.write_data(&table, path_table_header.as_path());
         Ok(())
     }
-    pub fn create_index(&mut self, db_name: &str, schema_name: &str, table_name: &str, index_name: &str) -> std::io::Result<()> {
+    pub fn create_index(&mut self, 
+                        db_name     : &str, 
+                        schema_name : &str, 
+                        table_name  : &str, 
+                        index_name  : &str
+    ) -> std::io::Result<()> {
         let path_idx_name = self.path_builder.function_file(db_name, schema_name, table_name, index_name);
         self.file_manager.create_file(path_idx_name.as_path())?;
         Ok(())
     }
-    pub fn create_function(&mut self, db_name: &str, schema_name: &str, table_name: &str, function_name: &str) -> Result<(), CatalogError> {
+    pub fn create_function(&mut self, 
+                           db_name      : &str, 
+                           schema_name  : &str, 
+                           table_name   : &str, 
+                           function_name: &str
+    ) -> Result<(), CatalogError> {
         let path_fn_name = self.path_builder.table_index(db_name, schema_name, table_name, function_name);
         self.file_manager.create_file(path_fn_name.as_path())?;
         Ok(())
     }
-
-    // GETTERS
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     pub fn get_databases(&self) -> Vec<&Database> {
         self.global_catalog.databases.values().collect()
     }
@@ -192,15 +205,27 @@ impl CatalogManager {
     pub fn get_database_names(&self) -> Vec<&str> {
         self.global_catalog.databases.keys().map(|x| x.as_str()).collect()
     }
-    pub fn get_schemas(&self, db_name: &str) -> &HashMap<String, u32> {
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
+    pub fn get_schemas(&self, db_name: &str) -> Vec<Schema> {
+        let database = self.global_catalog.databases.get(db_name).unwrap();
+        let mut schemas: Vec<Schema> = Vec::new();
+        for (sch_name, sch_id) in database.get_schemas() {
+            let path_schema = self.path_builder.schema_meta(db_name, sch_name);
+            let schema: Schema = self.file_manager.read_data(path_schema.as_path()).unwrap();
+            schemas.push(schema);
+        }
+        schemas
+    }
+    pub fn get_schemas_hm(&self, db_name: &str) -> &HashMap<String, u32> {
         let database = self.global_catalog.databases.get(db_name).unwrap();
         database.get_schemas()
     }
     pub fn get_schema(&self, db_name: &str, schema_name: &str) -> Option<Schema> {
-        let path_sh_meta = self.path_builder.schema_meta(db_name, schema_name);
-        let schema_meta= self.file_manager.read_data(path_sh_meta.as_path()).unwrap();
-        Some(schema_meta)
+        let path_schema = self.path_builder.schema_meta(db_name, schema_name);
+        let schema= self.file_manager.read_data(path_schema.as_path()).unwrap();
+        Some(schema)
     }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     pub fn get_tables(&self, db_name: &str, schema_name: &str) -> Vec<Table> {
         let database = self.global_catalog.databases.get(db_name).unwrap();
         let schema = database.get_schemas();
@@ -212,8 +237,12 @@ impl CatalogManager {
         }
         tables
     }
-
-    // HELP FUNCTIONS
+    pub fn get_table(&self, db_name: &str, schema_name: &str, table_name: &str) -> Option<Table> {
+        let path_table_meta = self.path_builder.table_header(db_name, schema_name, table_name);
+        let table: Table = self.file_manager.read_data(path_table_meta.as_path()).unwrap();
+        Some(table)
+    }
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////
     fn generate_database_id(&self) -> u32 {
         let mut max_id = 0;
         for db in self.global_catalog.databases.values() {
@@ -237,9 +266,8 @@ impl CatalogManager {
     fn generate_table_id(&self, db_name: &str, schema_name: &str) -> u32 {
         let mut max_id = 0;
         let path_schema = self.path_builder.schema_meta(db_name, schema_name);
-
-        let mut buffer: Vec<u8> = Vec::new();
         let schema_meta: Schema = self.file_manager.read_data(path_schema.as_path()).unwrap();
+        
         for table_id in schema_meta.get_tables().values() {
             if *table_id > max_id {
                 max_id = *table_id;
@@ -250,9 +278,8 @@ impl CatalogManager {
     fn generate_function_id(&self, db_name: &str, schema_name: &str) -> u32 {
         let mut max_id = 0;
         let path_schema = self.path_builder.schema_meta(db_name, schema_name);
-
-        let mut buffer: Vec<u8> = Vec::new();
         let schema_meta: Schema = self.file_manager.read_data(path_schema.as_path()).unwrap();
+        
         for table_id in schema_meta.get_functions().values() {
             if *table_id > max_id {
                 max_id = *table_id;

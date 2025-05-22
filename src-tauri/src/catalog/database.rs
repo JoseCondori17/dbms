@@ -4,10 +4,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Database {
-    db_id: u32,
-    db_name: String,
-    db_schemas: HashMap<String, u32>, // ref u32: table id
-    db_created_at: DateTime<Utc>,
+    db_id           : u32,
+    db_name         : String,
+    db_schemas      : HashMap<String, u32>, // ref u32: table id
+    db_created_at   : DateTime<Utc>,
 }
 
 impl Database {

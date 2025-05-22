@@ -58,8 +58,8 @@ impl Table {
     pub fn get_tab_page_size(&self) -> u32 {
         self.tab_page_size
     }
-    pub fn get_tab_columns(&self) -> Vec<Column> {
-        self.tab_columns.clone()
+    pub fn get_tab_columns(&self) -> &Vec<Column> {
+        self.tab_columns.as_ref()
     }
     pub fn get_tab_indexes(&self) -> Vec<Index> {
         self.tab_indexes.clone()
@@ -71,6 +71,8 @@ impl Table {
     pub fn add_index(&mut self, index: Index) {
         self.tab_indexes.push(index);
     }
+    
+    // for physical plan
     pub fn to_arrow_schema(&self) -> Arc<ArrowShema> {
         // https://docs.rs/datafusion/latest/datafusion/common/arrow/datatypes/struct.Schema.html
         let fields: Vec<Field> = self.tab_columns
@@ -88,6 +90,7 @@ impl Table {
     }
 }
 
+// for physical plan
 impl TableSource for Table {
     // https://docs.rs/datafusion/latest/datafusion/logical_expr/trait.TableSource.html
     fn as_any(&self) -> &dyn std::any::Any {

@@ -29,11 +29,16 @@ impl FileManager {
                 .open(path)
         } else {
             OpenOptions::new()
-                .read(true)
                 .write(true)
                 .create(false)
                 .open(path)
         }
+    }
+    
+    pub fn open_file_append(&self, path: &Path) -> Result<File> {
+        OpenOptions::new()
+            .append(true)
+            .open(path)
     }
     pub fn delete_file(&self, path: &Path) -> Result<()> {
         remove_file(path)?;

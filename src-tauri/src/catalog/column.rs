@@ -3,11 +3,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Column {
-    att_name: String,
-    att_type_id: u8,
-    att_len: u32,
+    att_name    : String,
+    att_type_id : u8,
+    att_len     : u32,
     att_not_null: bool,
-    att_has_def: bool,
+    att_has_def : bool,
 }
 
 impl Column {
@@ -41,7 +41,8 @@ impl Column {
     pub fn get_att_has_def(&self) -> bool {
         self.att_has_def
     }
-
+    
+    // for physical plan
     pub fn to_arrow_field(&self) -> Field {
         let data_type = match self.att_type_id {
             1 => DataType::Int16,                        // SMALLINT
@@ -51,7 +52,7 @@ impl Column {
             5 => DataType::Utf8,                         // CHAR
             6 => DataType::Utf8,                         // VARCHAR
             7 => DataType::Boolean,                      // BOOLEAN
-            8 => DataType::Utf8,                         // UUID
+            8 => DataType::Utf8,                        // UUID
             9 => DataType::Date32,                       // DATE
             10 => DataType::Time64(TimeUnit::Microsecond), // TIME
             11 => DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())), // TIMESTAMP WITH TIME ZONE

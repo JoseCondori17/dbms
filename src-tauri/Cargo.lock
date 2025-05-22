@@ -3,19 +3,6 @@
 version = 4
 
 [[package]]
-name = "DBMS"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "chrono",
- "datafusion",
- "once_cell",
- "serde",
- "thiserror",
- "uuid",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2470,6 +2457,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "src-tauri"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "byteorder",
+ "chrono",
+ "datafusion",
+ "once_cell",
+ "serde",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]

@@ -1,5 +1,8 @@
-/target
 .venv
 **/__pycache__/
-.idea
+../.idea
 /sonora
+
+**/.pytest_cache/
+
+**/data/**/*.dat

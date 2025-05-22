@@ -1,2 +1,2 @@
-mod btree;
-mod heap;
+pub mod btree;
+pub mod heap;
