@@ -1,10 +1,12 @@
 from pathlib import Path
 from dataclasses import dataclass, field
 from sqlglot import expressions as exp
+
 from query.parser_sql import parser_sql
 from engine.planner import login_plan
 from engine.operators.create import Create
 from engine.operators.insert import Insert
+from engine.operators.select import Select
 from catalog.catalog_manager import CatalogManager
 
 @dataclass
@@ -25,8 +27,8 @@ class PKAdmin:
                 insert = Insert(self.catalog)
                 insert.execute(expr)
             elif isinstance(expr, exp.Select):
-                plan = login_plan(expr)
-                pass
+                select = Select(self.catalog)
+                select.execute(expr)
             elif isinstance(expr, exp.Delete):
                 pass
             elif isinstance(expr, exp.Update):

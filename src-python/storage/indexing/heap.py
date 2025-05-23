@@ -22,12 +22,36 @@ class HeapFile:
         offset = self.writer.tell()
         return (offset // self.fixed_length.get_format_size()) - 1
 
+    def delete(self, record_id: int):
+        record = self.read_record(record_id)
+        data_tuple, _ = record
+        packed_data = self.fixed_length.packing(data_tuple, is_active=False)
+        file_position = record_id * self.fixed_length.get_format_size()
+        self._file.seek(file_position)
+        self._file.write(packed_data)
+        self._file.flush()
+
+    def get_column_value(self, record_id: int, column_name: str) -> any:
+        record = self.read_record(record_id)
+        column_index = self._get_column_index(column_name)
+        return record[column_index]
+
+    def _get_column_index(self, column_name: str) -> int:
+        columns = self.table.get_tab_columns()
+        for index, column in enumerate(columns):
+            if column.get_column_name() == column_name:
+                return index
+
+    def read_record(self, record_id: int) -> tuple[tuple[any, ...], bool]:
+        data_bytes = self.read_at(record_id)
+        return self.fixed_length.unpacking(data_bytes)
+
+    def read_at(self, record_id: int) -> bytes:
+        self.reader.seek(record_id * self.fixed_length.get_format_size())
+        return self.reader.read(self.fixed_length.get_format_size())
+
     def finalize(self):
         self.writer.flush()
-
-    def read_at(self, offset: int) -> bytes:
-        self.reader.seek(offset * self.fixed_length.get_format_size())
-        return self.reader.read(self.fixed_length.get_format_size())
 
     def close(self):
         self.writer.flush()

@@ -11,6 +11,7 @@ from catalog.column import Column
 from catalog.index import Index
 from storage.disk.path_builder import PathBuilder
 from storage.disk.file_manager import FileManager
+from models.enum.index_enum import IndexType
 
 VERSION = "0.0.1"
 
@@ -86,19 +87,19 @@ class CatalogManager:
         path_table = self.path_builder.table_dir(db_name, schema_name, table_name)
         path_table_data = self.path_builder.table_data(db_name, schema_name, table_name)
         path_table_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
-        #path_table_idx_pk = self.path_builder.table_index(db_name, schema_name, table_name, "pk")
+
         if not self.file_manager.path_exists(path_table):
             self.file_manager.create_directory(path_table)
         self.file_manager.create_file(path_table_data)
         self.file_manager.create_file(path_table_meta)
-        #self.file_manager.create_file(path_table_idx_pk)
-        # Update schema metadata
+
+        # update schema metadata
         table_id = self.generate_table_id(db_name, schema_name)
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         schema_meta: Schema = self.file_manager.read_data(path_sh_meta)
         schema_meta.add_table(table_name, table_id)
         self.file_manager.write_data(schema_meta, path_sh_meta)
-        # Write table header metadata
+        # write table header metadata
         table = Table(
             tab_id=table_id,
             tab_name=table_name,
@@ -111,11 +112,36 @@ class CatalogManager:
         )
         self.file_manager.write_data(table, path_table_meta)
 
-    # pending
-    def create_index(self, db_name: str, schema_name: str, table_name: str, index_name: str) -> None:
+    def create_index(self, 
+                     db_name: str, 
+                     schema_name: str, 
+                     table_name: str, 
+                     index_name: str, 
+                     index_type: IndexType = IndexType.BTREE, 
+                     index_colum: int = 0,
+                     index_is_primary: bool = False
+                     ) -> None:
+        path_table_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
         path_idx_name = self.path_builder.table_index(db_name, schema_name, table_name, index_name)
+        table: Table = self.file_manager.read_data(path_table_meta)
+        
+        table_id = self.generate_index_id(db_name, schema_name, table_name)
+        index = Index(
+            idx_id=table_id,
+            idx_type=index_type.value,
+            idx_name=index_name,
+            idx_file=path_idx_name,
+            idx_tuples=0,
+            idx_columns=[index_colum,],
+            idx_is_primary=index_is_primary
+        )
+        table.add_index(index)
+        # update table metadata
+        self.file_manager.write_data(table, path_table_meta)
+        # create new index file
         self.file_manager.create_file(path_idx_name)
 
+    # pending
     def create_function(self, db_name: str, schema_name: str, table_name: str, function_name: str) -> None:
         path_fn_name = self.path_builder.table_index(db_name, schema_name, table_name, function_name)
         self.file_manager.create_file(path_fn_name)
@@ -154,6 +180,14 @@ class CatalogManager:
             tables.append(table)
         return tables
     
+    def get_position_column_by_name(self, db_name: str, schema_name: str, table_name: str, column_name: str) -> Optional[int]:
+        table: Table = self.get_table(db_name, schema_name, table_name)
+        for i, column in enumerate(table.get_tab_columns()):
+            if column.get_att_name() == column_name:
+                return i
+        return None
+        
+
     # /////////////////////////////////////////////////////////////////////////////////////////
     def generate_database_id(self) -> int:
         return max((db.get_id() for db in self.global_catalog.databases.values()), default=0) + 1

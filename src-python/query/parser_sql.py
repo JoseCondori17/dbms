@@ -7,6 +7,8 @@ from sqlglot.expressions import (
     DataType, 
     Literal,
     Tuple,
+    Var,
+    IndexParameters,
     DefaultColumnConstraint, 
     NotNullColumnConstraint
 )
@@ -79,4 +81,13 @@ def to_tuple(expr: Expression) -> tuple:
         if value.this:
             values.append(value.to_py())
     return tuple(values)
-# review this function
+
+def get_index_type(expr: Expression) -> str:
+    params = expr.find(IndexParameters)
+    index = params.find(Var)
+    return index.name if index else None
+
+def get_column_name(expr: Expression) -> str:
+    params = expr.find(IndexParameters)
+    identifier = params.find(Identifier)
+    return identifier.name if identifier else None

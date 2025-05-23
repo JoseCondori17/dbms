@@ -38,6 +38,8 @@ class FixedLengthRecord:
                 format_str += 'I'
             elif column.att_type_id == DataTypeTag.TIMESTAMP:
                 format_str += 'Q'
+        
+        format_str += '?' # active(1) or delete(0)
         self.format_str = format_str
 
     def convert_value_for_packing(self, value: any, column: Column):
@@ -173,7 +175,6 @@ class FixedLengthRecord:
             result.append(self.convert_from_bytes(value, column))
         
         is_active = unpacked[-1]
-        
         return tuple(result), is_active
     
     def get_format_str(self) -> str:
