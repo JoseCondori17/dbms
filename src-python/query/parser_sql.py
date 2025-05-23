@@ -5,7 +5,8 @@ from sqlglot.expressions import (
     ColumnDef, 
     Identifier, 
     DataType, 
-    Literal, 
+    Literal,
+    Tuple,
     DefaultColumnConstraint, 
     NotNullColumnConstraint
 )
@@ -69,10 +70,13 @@ def get_columns(expr: Expression) -> list[Column]:
         )
     return columns
 
-def get_values(expr: Expression) -> list[tuple]:
+def get_values(expr: Expression) -> list[Tuple]:
+    return expr.find_all(Tuple)
+
+def to_tuple(expr: Expression) -> tuple:
     values = []
     for value in expr.find_all(Literal):
         if value.this:
-            values.append(value.this)
-    return values
+            values.append(value.to_py())
+    return tuple(values)
 # review this function

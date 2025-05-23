@@ -138,6 +138,11 @@ class CatalogManager:
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         return self.file_manager.read_data(path_sh_meta)
     
+    def get_table(self, db_name: str, schema_name: str, table_name: str) -> Optional[Table]:
+        path_tab_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
+        table: Table = self.file_manager.read_data(path_tab_meta)
+        return table
+
     def get_tables(self, db_name: str, schema_name: str) -> list[Table]:
         database = self.global_catalog.databases[db_name]
         schema = self.path_builder.schema_meta(db_name, schema_name)

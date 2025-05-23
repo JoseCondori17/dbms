@@ -16,7 +16,6 @@ class DataTypeTag(IntEnum):
     JSON        = 12
     DECIMAL     = 13
 
-
 class DataTypeSize(IntEnum):
     SMALLINT    = 2
     INT         = 4
@@ -31,6 +30,3 @@ class DataTypeSize(IntEnum):
     TIMESTAMP   = 8
     GEOMETRIC   = 0
     JSON        = 0
-
-
-    
