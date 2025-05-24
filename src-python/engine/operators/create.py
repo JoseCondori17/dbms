@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass 
 from sqlglot import expressions as exp
 import os
 
@@ -7,6 +7,7 @@ from catalog.column import Column
 from storage.indexing.heap import HeapFile
 from storage.indexing.isam import ISAMFile
 from storage.indexing.hashing import ExtendibleHashingFile
+from storage.indexing.btree import BTreeFile
 from models.enum.index_enum import IndexType
 from query.parser_sql import (
     get_table_catalog,
@@ -39,7 +40,6 @@ class Create:
             raise ValueError(f"Unknown create kind: {fn}")
         
     def _create_table(self, expr: exp.Create):
-        # default index name BTREE
         db_name: str = get_table_catalog(expr)
         schema_name: str = get_table_schema(expr)
         table_name: str = get_table_name(expr)
@@ -86,8 +86,8 @@ class Create:
         )
         path_data = self.catalog.path_builder.table_data(db_name, schema_name, table_name)
         path_index = self.catalog.path_builder.table_index(db_name, schema_name, table_name, index_name)
-        if os.path.getsize(path_data) != 0:
 
+        if os.path.getsize(path_data) != 0:
             table = self.catalog.get_table(db_name, schema_name, table_name)
             with HeapFile(table, path_data) as heap:
                 if IndexType[index_type] == IndexType.ISAM:
@@ -102,38 +102,33 @@ class Create:
                         record_data = heap.read_record(record_id)
                         if record_data is None:
                             break
-                        
                         data_tuple, is_active = record_data
-                        
                         if is_active:
                             key = data_tuple[index_column]
-                            
                             if records_processed % block_factor == 0:
                                 logical_position = records_processed // block_factor
                                 isam_file.insert(key, logical_position)
-                            
                             records_processed += 1
-                        
                         record_id += 1
+
                 elif IndexType[index_type] == IndexType.BTREE:
                     column: Column = table.get_tab_columns()[index_column]
-                    # btree_file = BTREEFile(index_filename=path_index, max_key_size=column.get_att_len())
+                    btree_file = BTreeFile(index_filename=path_index)  # ✅ Usa tu clase funcional
                     record_id = 0
                     while True:
                         record_data = heap.read_record(record_id)
                         if record_data is None:
                             break
-                        
                         data_tuple, is_active = record_data
                         if is_active:
-                            key = data_tuple[index_column]
-                            # btree_file.insert(key, record_id)
-                        
+                            key = str(data_tuple[index_column])
+                            btree_file.insert(key, record_id)
                         record_id += 1
+
                 elif IndexType[index_type] == IndexType.HASH:
                     column: Column = table.get_tab_columns()[index_column]
                     hash_file = ExtendibleHashingFile(index_filename=path_index, max_key_size=column.get_att_len())
-                
+
                     record_id = 0
                     while True:
                         record_data = heap.read_record(record_id)
@@ -143,10 +138,6 @@ class Create:
                         if is_active:
                             key = data_tuple[index_column]
                             hash_file.insert(key, record_id)
-                        
                         record_id += 1
 
             print(index_type)
-
-
-
