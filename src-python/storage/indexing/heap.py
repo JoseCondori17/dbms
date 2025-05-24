@@ -8,7 +8,7 @@ class HeapFile:
     def __init__(self, table: Table, file_path: Path, buf_size: int = 8192):
         self.table = table
         self.file_path = file_path
-        self._file = open(file_path, "a+b", buffering=0)
+        self._file = open(file_path, "a+b", buffering=buf_size)
         self.writer = BufferedWriter(raw=self._file, buffer_size=buf_size) #8kb
         self.reader = BufferedReader(raw=self._file, buffer_size=buf_size) #8kb
 
@@ -44,9 +44,17 @@ class HeapFile:
 
     def read_record(self, record_id: int) -> tuple[tuple[any, ...], bool]:
         data_bytes = self.read_at(record_id)
+        if data_bytes is None:
+            return None
         return self.fixed_length.unpacking(data_bytes)
 
     def read_at(self, record_id: int) -> bytes:
+        self.reader.seek(0, 2)
+        file_size = self.reader.tell() // self.fixed_length.get_format_size()
+        
+        if record_id >= file_size:
+            return None
+        
         self.reader.seek(record_id * self.fixed_length.get_format_size())
         return self.reader.read(self.fixed_length.get_format_size())
 

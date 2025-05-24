@@ -1,4 +1,6 @@
 sqlglot[rs]
 pytest
-streamlit
 xxhash
+
+streamlit
+streamlit-shadcn-ui

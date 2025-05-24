@@ -3,7 +3,7 @@ import struct
 import os
 
 # Reference: https://www.geeksforgeeks.org/extendible-hashing-dynamic-approach-to-dbms/
-class ExtendibleHashing:
+class ExtendibleHashingFile:
     HEADER_SIZE = 12
     DIRECTORY_ENTRY_SIZE = 4
     BUCKET_HEADER_SIZE = 12
@@ -24,7 +24,7 @@ class ExtendibleHashing:
             self._load_header()
 
     # main functions
-    def insert(self, key: str, data_offset: int) -> bool:
+    def insert(self, key: str, data_position: int) -> bool:
         # key length check is not needed because key is already limited by max_key_size
         directory = self._read_directory()
         bucket_index = self._get_bucket_index(key)
@@ -34,12 +34,12 @@ class ExtendibleHashing:
         
         for i, (existing_key, _) in enumerate(records):
             if existing_key == key:
-                records[i] = (key, data_offset)
+                records[i] = (key, data_position)
                 self._write_bucket(bucket_id, local_depth, records)
                 return True
         
         if len(records) < self.bucket_size:
-            records.append((key, data_offset))
+            records.append((key, data_position))
             self._write_bucket(bucket_id, local_depth, records)
             return True
         
@@ -58,7 +58,7 @@ class ExtendibleHashing:
         
         self._update_directory_after_split(bucket_id, new_bucket_id, new_local_depth)
         
-        return self.insert(key, data_offset)
+        return self.insert(key, data_position)
 
     def delete(self, key: str) -> bool:
         directory = self._read_directory()
@@ -75,16 +75,16 @@ class ExtendibleHashing:
         
         return False
 
-    def search(self, key: str) -> int:
+    def search(self, key: str) -> int | None:
         directory = self._read_directory()
         bucket_index = self._get_bucket_index(key)
         bucket_id = directory[bucket_index]
         
         _, records = self._read_bucket(bucket_id)
         
-        for record_key, data_offset in records:
+        for record_key, data_position in records:
             if record_key == key:
-                return data_offset
+                return data_position
         
         return None
 
@@ -126,9 +126,9 @@ class ExtendibleHashing:
             key = key[:self.max_key_size]
         
         key_bytes = key.encode('utf-8')
-        padded_key = key_bytes.ljust(self.max_key_size, b'\0')
+        padding_pkey = key_bytes.ljust(self.max_key_size, b'\0')
         
-        return padded_key + struct.pack('I', offset)
+        return padding_pkey + struct.pack('I', offset)
 
     def _unpack_index_record(self, record_bytes: bytes) -> tuple[str, int]:
         key_bytes = record_bytes[:self.max_key_size].rstrip(b'\0')
@@ -144,7 +144,7 @@ class ExtendibleHashing:
             if len(bucket_header) < self.BUCKET_HEADER_SIZE:
                 return 0, []
             
-            local_depth, max_size, record_count = struct.unpack('III', bucket_header)
+            local_depth, _, record_count = struct.unpack('III', bucket_header)
             
             records = []
             for _ in range(record_count):

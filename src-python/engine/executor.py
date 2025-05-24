@@ -35,6 +35,3 @@ class PKAdmin:
                 pass
             else:
                 print(f"Undefined: {type(expr)}")
-
-    def get(self):
-        return self.catalog.get_tables("ecm", "store")

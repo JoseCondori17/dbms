@@ -82,6 +82,10 @@ def to_tuple(expr: Expression) -> tuple:
             values.append(value.to_py())
     return tuple(values)
 
+def get_identifier(expr: Expression):
+    ident = expr.find(Identifier)
+    return list(ident.args.values())[0]
+
 def get_index_type(expr: Expression) -> str:
     params = expr.find(IndexParameters)
     index = params.find(Var)

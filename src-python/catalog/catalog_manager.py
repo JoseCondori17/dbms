@@ -13,6 +13,8 @@ from storage.disk.path_builder import PathBuilder
 from storage.disk.file_manager import FileManager
 from models.enum.index_enum import IndexType
 
+from storage.indexing.hashing import ExtendibleHashingFile
+
 VERSION = "0.0.1"
 
 @dataclass
@@ -117,7 +119,7 @@ class CatalogManager:
                      schema_name: str, 
                      table_name: str, 
                      index_name: str, 
-                     index_type: IndexType = IndexType.BTREE, 
+                     index_type: int, 
                      index_colum: int = 0,
                      index_is_primary: bool = False
                      ) -> None:
@@ -128,7 +130,7 @@ class CatalogManager:
         table_id = self.generate_index_id(db_name, schema_name, table_name)
         index = Index(
             idx_id=table_id,
-            idx_type=index_type.value,
+            idx_type=index_type,
             idx_name=index_name,
             idx_file=path_idx_name,
             idx_tuples=0,
@@ -187,6 +189,33 @@ class CatalogManager:
                 return i
         return None
         
+    def callbacks_index(self, db_name: str, schema_name: str, table_name: str) -> dict:
+        table = self.get_table(db_name, schema_name, table_name)
+        indexes = table.get_tab_indexes()
+        callback_cls = {}
+
+        def get_index_by_id(id: int, index_filename: str, key_size: int):
+            if id == IndexType.SEQUENTIAL.value:
+                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+            if id == IndexType.AVL.value:
+                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+            if id == IndexType.ISAM.value:
+                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+            if id == IndexType.HASH.value:
+                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+            if id == IndexType.BTREE.value:
+                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+            if id == IndexType.RTREE.value:
+                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+
+        columns = table.get_tab_columns()
+        for index in indexes:
+            column_pos = index.get_idx_columns()[0]
+            callback_cls[index.get_idx_id()] = (
+                get_index_by_id(index.get_idx_type(), index.get_idx_file(), columns[column_pos].get_att_len()),
+                column_pos
+            )
+        return callback_cls
 
     # /////////////////////////////////////////////////////////////////////////////////////////
     def generate_database_id(self) -> int:

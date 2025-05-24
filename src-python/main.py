@@ -2,7 +2,7 @@ from engine.executor import PKAdmin
 from query.parser_sql import parser_sql, get_values
 
 create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
-select_q = "SELECT name FROM ecm.store.employee WHERE id = 1;"
+select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Eva Liu';"
 database_q = "CREATE DATABASE ecm"
 schema_q = "CREATE SCHEMA ecm.store"
 set_q = "SET search_path TO ecm.store"
@@ -30,6 +30,7 @@ query = """
         name VARCHAR(50), 
         salary DOUBLE
     );
+    --CREATE INDEX idx_name ON ecm.store.employees USING hash(name);
 
     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
     (1, 'John Doe', 500.00), 
@@ -45,8 +46,9 @@ query = """
 """
 # se debe manejar los errores si es que ya existen
 admin = PKAdmin()
-table = admin.catalog.get_table("ecm", "store", "employees")
-print(table)
+admin.execute(select_q)
+#table = admin.catalog.get_table("ecm", "store", "employees")
+#print(table)
 
 """
 logic plan: https://medium.com/@harun.raseed093/spark-logical-and-physical-plans-e111de6cc22e
