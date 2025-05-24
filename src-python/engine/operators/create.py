@@ -139,5 +139,6 @@ class Create:
                             key = data_tuple[index_column]
                             hash_file.insert(key, record_id)
                         record_id += 1
-
+                elif IndexType[index_type] == IndexType.RTREE:
+                    pass
             print(index_type)
