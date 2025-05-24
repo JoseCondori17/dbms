@@ -24,13 +24,18 @@ insert_q = """
 query = """
     -- SET search_path TO store;
     CREATE DATABASE ecm;
+    --db.sch
     CREATE SCHEMA ecm.store;
+    --db.sch.table
     CREATE TABLE ecm.store.employees (
-        id INT, 
+        id INT, --PK
         name VARCHAR(50), 
         salary DOUBLE
     );
     --CREATE INDEX idx_name ON ecm.store.employees USING hash(name);
+    --CREATE INDEX idx_name ON ecm.store.employees USING btree(name);
+    --CREATE INDEX idx_name ON ecm.store.employees USING isam(name);
+    --CREATE INDEX idx_name ON ecm.store.employees USING rtree(name);
 
     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
     (1, 'John Doe', 500.00), 

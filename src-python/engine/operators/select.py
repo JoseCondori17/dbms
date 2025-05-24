@@ -43,15 +43,15 @@ class Select:
             key: str = plan.condition.expression.to_py()
             records = self.call_isam()
 
+        elif index_type == IndexType.RTREE.value:
+            pass
+
     def get_index(self, column_name: str, table: Table):
         pos = 0
         for i, column in enumerate(table.get_tab_columns()):
-            print(len(column.get_att_name()), column_name)
             if column.get_att_name() == column_name:
-               print("adw ",pos)
                pos = i
                break
-        print(pos)
         indexes = table.get_tab_indexes()
         if (pos + 1) > len(indexes):
             return indexes[0]
