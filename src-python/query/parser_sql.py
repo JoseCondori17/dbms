@@ -95,3 +95,8 @@ def get_column_name(expr: Expression) -> str:
     params = expr.find(IndexParameters)
     identifier = params.find(Identifier)
     return identifier.name if identifier else None
+
+def get_copy_info(expr: Expression) -> tuple[str, str, str]:
+    table = expr.args.get("this")
+    filename = expr.args.get("expression")
+    return table.catalog, table.db, table.name, filename.name

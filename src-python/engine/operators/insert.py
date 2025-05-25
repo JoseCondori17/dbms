@@ -16,6 +16,16 @@ from storage.indexing.heap import HeapFile
 class Insert:
     catalog: CatalogManager
 
+    def execute_from_tuple(self, db_name, schema_name, table_name, values: tuple) -> None:
+        table = self.catalog.get_table(db_name, schema_name, table_name)
+        table_path = self.catalog.path_builder.table_data(db_name, schema_name, table_name)
+        indexes = self.catalog.callbacks_index(db_name, schema_name, table_name)
+
+        with HeapFile(table, table_path) as heap:
+            position = heap.insert(values)
+            for index, pos_column in indexes.values():
+                index.insert(str(values[pos_column]), position)    
+
     def execute(self, expr: exp.Insert) -> None:
         db_name = get_table_catalog(expr)
         schema_name = get_table_schema(expr)
