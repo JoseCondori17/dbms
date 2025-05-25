@@ -4,3 +4,4 @@ xxhash
 
 streamlit
 streamlit-shadcn-ui
+fastapi[standard]

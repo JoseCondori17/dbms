@@ -60,20 +60,20 @@ class ExtendibleHashingFile:
         
         return self.insert(key, data_position)
 
-    def delete(self, key: str) -> bool:
+    def delete(self, key: str) -> int | None:
         directory = self._read_directory()
         bucket_index = self._get_bucket_index(key)
         bucket_id = directory[bucket_index]
         
         local_depth, records = self._read_bucket(bucket_id)
         
-        for i, (record_key, _) in enumerate(records):
+        for i, (record_key, data_position) in enumerate(records):
             if record_key == key:
                 records.pop(i)
                 self._write_bucket(bucket_id, local_depth, records)
-                return True
+                return data_position
         
-        return False
+        return None
 
     def search(self, key: str) -> int | None:
         directory = self._read_directory()
