@@ -113,7 +113,7 @@ class Create:
 
                 elif IndexType[index_type] == IndexType.BTREE:
                     column: Column = table.get_tab_columns()[index_column]
-                    btree_file = BTreeFile(index_filename=path_index)  # ✅ Usa tu clase funcional
+                    btree_file = BTreeFile(index_filename=path_index)
                     record_id = 0
                     while True:
                         record_data = heap.read_record(record_id)
@@ -139,6 +139,7 @@ class Create:
                             key = data_tuple[index_column]
                             hash_file.insert(key, record_id)
                         record_id += 1
+
                 elif IndexType[index_type] == IndexType.RTREE:
                     pass
             print(index_type)
