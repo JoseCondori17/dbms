@@ -35,8 +35,18 @@ PKAdminDep = Annotated[PKAdmin, Depends(get_pkadmin)]
 # //////////////////////////////////////////////////////////////////////
 # api.pk_admin
 @app.get("/databases")
-async def get_catalog_info(pk_admin: PKAdminDep):
-    databases = pk_admin.catalog.get_database_names()
-    return { 'data': databases }
+async def get_databases(pk_admin: PKAdminDep):
+    return pk_admin.catalog.get_databases_json()
 
-#@app.get("/databases")
+@app.get("/{db_name}/schemas")
+async def get_schemas(pk_admin: PKAdminDep, db_name: str):
+    return pk_admin.catalog.get_schemas_json(db_name)
+
+@app.get("/{db_name}/{schema_name}/tables")
+async def get_schemas(pk_admin: PKAdminDep, db_name: str, schema_name: str):
+    return pk_admin.catalog.get_tables_json(db_name, schema_name)
+
+@app.pos("/execute")
+async def execute_query(pk_admin: PKAdminDep, query: str):
+    data = pk_admin.execute(query)
+    return data
