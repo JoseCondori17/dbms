@@ -47,7 +47,6 @@ class CatalogManager:
         else:
             self.save_catalog()
 
-    # /////////////////////////////////////////////////////////////////////////////////////////
     def load_catalog(self) -> None:
         self.global_catalog = self.file_manager.read_data(self.system_catalog_path)
         
@@ -57,7 +56,6 @@ class CatalogManager:
             self.file_manager.create_file(self.system_catalog_path)
         self.file_manager.write_data(self.global_catalog, self.system_catalog_path)
 
-    # /////////////////////////////////////////////////////////////////////////////////////////
     def create_database(self, db_name: str) -> None:
         path_db = self.path_builder.database_dir(db_name)
         path_db_meta = self.path_builder.database_meta(db_name)
@@ -77,13 +75,10 @@ class CatalogManager:
         schema_id = self.generate_schema_id(db_name)
         database = self.global_catalog.databases[db_name]
         database.add_schema(schema_name, schema_id)
-        # Update database metadata
         path_db_meta = self.path_builder.database_meta(db_name)
         self.file_manager.write_data(database, path_db_meta)
-        # Write schema metadata
         schema = Schema(schema_id, schema_name, database.get_id())
         self.file_manager.write_data(schema, path_sh_meta)
-        # Save database catalog data
         self.save_catalog()
 
     def create_table(self, db_name: str, schema_name: str, table_name: str, columns: list[Column], indexes: list[Index]) -> None:
@@ -96,13 +91,11 @@ class CatalogManager:
         self.file_manager.create_file(path_table_data)
         self.file_manager.create_file(path_table_meta)
 
-        # update schema metadata
         table_id = self.generate_table_id(db_name, schema_name)
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         schema_meta: Schema = self.file_manager.read_data(path_sh_meta)
         schema_meta.add_table(table_name, table_id)
         self.file_manager.write_data(schema_meta, path_sh_meta)
-        # write table header metadata
         table = Table(
             tab_id=table_id,
             tab_name=table_name,
@@ -139,17 +132,13 @@ class CatalogManager:
             idx_is_primary=index_is_primary
         )
         table.add_index(index)
-        # update table metadata
         self.file_manager.write_data(table, path_table_meta)
-        # create new index file
         self.file_manager.create_file(path_idx_name)
 
-    # pending
     def create_function(self, db_name: str, schema_name: str, table_name: str, function_name: str) -> None:
         path_fn_name = self.path_builder.table_index(db_name, schema_name, table_name, function_name)
         self.file_manager.create_file(path_fn_name)
 
-    # /////////////////////////////////////////////////////////////////////////////////////////
     def get_version(self) -> str:
         return self.global_catalog.version
     
@@ -258,7 +247,6 @@ class CatalogManager:
             )
         return callback_cls
 
-    # /////////////////////////////////////////////////////////////////////////////////////////
     def generate_database_id(self) -> int:
         return max((db.get_id() for db in self.global_catalog.databases.values()), default=0) + 1
     def generate_schema_id(self, db_name: str) -> int:

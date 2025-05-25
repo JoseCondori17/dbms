@@ -6,7 +6,7 @@ from catalog.catalog_manager import CatalogManager
 from models.enum.index_enum import IndexType
 from storage.indexing.heap import HeapFile
 from storage.indexing.hashing import ExtendibleHashingFile
-from storage.indexing.btree import BTreeFile
+from storage.indexing.bplus_tree import BPlusTreeFile
 from storage.indexing.isam import ISAMFile
 from engine.planner import login_plan
 from query.parser_sql import (
@@ -34,7 +34,7 @@ class Select:
         index_type = index.get_idx_type()
         if index_type == IndexType.BTREE.value:
             key: str = plan.condition.expression.to_py()
-            record = self.call_btree(table, index.get_idx_file(), path_data, key)
+            record = self.call_btree(table, index, path_data, key)
             print(record)
         elif index_type == IndexType.HASH.value:
             column = columns[index.get_idx_columns()[0]]
@@ -69,13 +69,17 @@ class Select:
         record = heap_file.read_record(pos)
         return record
     
-    def call_btree(self, table, index_file, data_file, key: str):
-        btree_file = BTreeFile(index_filename=index_file)
-        heap_file = HeapFile(table, data_file)
-        pos = btree_file.search(key)
-        if pos is None:
-            return None
-        record = heap_file.read_record(pos)
-        return record
+    def call_btree(self, table: Table, index_obj, data_file: str, key: str):
+        col_pos    = index_obj.get_idx_columns()[0]
+        column     = table.get_tab_columns()[col_pos]
+        idx_path   = index_obj.get_idx_file()
+        btree = BPlusTreeFile(
+            index_filename=str(idx_path),
+            max_key_size=column.get_att_len(),
+            order=4
+        )
+        heap = HeapFile(table, data_file)
+        pos  = btree.search(key)
+        return None if pos is None else heap.read_record(pos)
 
     def call_isam(): pass

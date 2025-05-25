@@ -46,7 +46,7 @@ async def get_schemas(pk_admin: PKAdminDep, db_name: str):
 async def get_schemas(pk_admin: PKAdminDep, db_name: str, schema_name: str):
     return pk_admin.catalog.get_tables_json(db_name, schema_name)
 
-@app.pos("/execute")
+@app.post("/execute")
 async def execute_query(pk_admin: PKAdminDep, query: str):
-    data = pk_admin.execute(query)
-    return data
+    result = pk_admin.execute(query)
+    return result
