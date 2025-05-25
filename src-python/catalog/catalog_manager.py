@@ -13,6 +13,7 @@ from storage.disk.path_builder import PathBuilder
 from storage.disk.file_manager import FileManager
 from models.enum.index_enum import IndexType
 
+from storage.indexing.btree import BTreeFile
 from storage.indexing.hashing import ExtendibleHashingFile
 
 VERSION = "0.0.1"
@@ -204,7 +205,7 @@ class CatalogManager:
             if id == IndexType.HASH.value:
                 return ExtendibleHashingFile(index_filename, max_key_size=key_size)
             if id == IndexType.BTREE.value:
-                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+                return BTreeFile()
             if id == IndexType.RTREE.value:
                 return ExtendibleHashingFile(index_filename, max_key_size=key_size)
 
