@@ -8,6 +8,7 @@ from storage.indexing.heap import HeapFile
 from storage.indexing.isam import ISAMFile
 from storage.indexing.hashing import ExtendibleHashingFile
 from storage.indexing.btree import BTreeFile
+from storage.indexing.rtree import RTreeFile
 from models.enum.index_enum import IndexType
 from query.parser_sql import (
     get_table_catalog,
@@ -140,5 +141,25 @@ class Create:
                             hash_file.insert(key, record_id)
                         record_id += 1
                 elif IndexType[index_type] == IndexType.RTREE:
-                    pass
+                    rtree_file = RTreeFile(index_filename=path_index)
+                    column_x = index_column
+                    column_y = column_x + 1  # asumimos que esta en la derechaa
+                    column_w = column_x + 2
+                    column_h = column_x + 3
+
+                    record_id = 0
+                    while True:
+                        record_data = heap.read_record(record_id)
+                        if record_data is None:
+                            break
+                        data_tuple, is_active = record_data
+                        if is_active:
+                            x = float(data_tuple[column_x])
+                            y = float(data_tuple[column_y])
+                            w = float(data_tuple[column_w])
+                            h = float(data_tuple[column_h])
+                            rect = (x, y, x + w, y + h)
+                            rtree_file.insert(rect, record_id)
+                        record_id += 1
+
             print(index_type)

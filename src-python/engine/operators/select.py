@@ -7,10 +7,12 @@ from models.enum.index_enum import IndexType
 from storage.indexing.heap import HeapFile
 from storage.indexing.hashing import ExtendibleHashingFile
 from storage.indexing.btree import BTreeFile
+from storage.indexing.rtree import RTreeFile
 from storage.indexing.isam import ISAMFile
 from engine.planner import login_plan
 from query.parser_sql import (
     get_table_catalog,
+    get_rectangle_components,
     get_table_schema,
     get_table_name,
     get_identifier
@@ -45,7 +47,12 @@ class Select:
             records = self.call_isam()
 
         elif index_type == IndexType.RTREE.value:
-            pass
+            column = columns[index.get_idx_columns()[0]]
+            x, y, w, h = get_rectangle_components(plan.condition)
+            rect = (x, y, x + w, y + h)
+            results = self.call_rtree(table, index.get_idx_file(), path_data, rect)
+            print("Resultados desde R-Tree:", results)
+
 
     def get_index(self, column_name: str, table: Table):
         pos = 0
@@ -77,5 +84,17 @@ class Select:
             if record is not None:
                 output.append(record)
         return output
+    
+    def call_rtree(self, table, index_file, data_file, rect) -> list:
+        rtree_file = RTreeFile(index_file)
+        heap_file = HeapFile(table, data_file)
+        record_ids = rtree_file.search(rect)
+        output = []
+        for rid in record_ids:
+            record = heap_file.read_record(rid)
+        if record is not None:
+            output.append(record)
+        return output
+
 
     def call_isam(): pass

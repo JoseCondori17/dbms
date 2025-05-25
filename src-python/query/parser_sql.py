@@ -7,6 +7,8 @@ from sqlglot.expressions import (
     DataType, 
     Literal,
     Tuple,
+    EQ,
+    And,
     Var,
     IndexParameters,
     DefaultColumnConstraint, 
@@ -95,3 +97,40 @@ def get_column_name(expr: Expression) -> str:
     params = expr.find(IndexParameters)
     identifier = params.find(Identifier)
     return identifier.name if identifier else None
+
+def get_copy_info(expr: Expression) -> tuple[str, str, str]:
+    table = expr.args.get("this")
+    filename = expr.args.get("expression")
+    return table.catalog, table.db, table.name, filename.name
+
+def get_rectangle_components(expr: Expression) -> tuple[float, float, float, float]:
+    x = y = w = h = None
+
+    conditions = []
+
+    # Recorrer condición compuesta con AND
+    if isinstance(expr, And):
+        for e in expr.flatten():
+            if isinstance(e, EQ):
+                conditions.append(e)
+    elif isinstance(expr, EQ):
+        conditions.append(expr)
+
+    for cond in conditions:
+        col = cond.left.name.lower()
+        val = float(cond.right.name if isinstance(cond.right, Identifier) else cond.right.this)
+        match col:
+            case "x":
+                x = val
+            case "y":
+                y = val
+            case "w":
+                w = val
+            case "h":
+                h = val
+
+    if None in (x, y, w, h):
+        raise ValueError("Faltan componentes del rectángulo en el WHERE.")
+    
+    return (x, y, w, h)
+
