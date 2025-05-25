@@ -205,7 +205,7 @@ class CatalogManager:
             if id == IndexType.HASH.value:
                 return ExtendibleHashingFile(index_filename, max_key_size=key_size)
             if id == IndexType.BTREE.value:
-                return BTreeFile()
+                return BTreeFile(index_filename=index_filename)
             if id == IndexType.RTREE.value:
                 return ExtendibleHashingFile(index_filename, max_key_size=key_size)
 

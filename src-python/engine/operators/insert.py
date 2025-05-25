@@ -21,6 +21,9 @@ class Insert:
         table_path = self.catalog.path_builder.table_data(db_name, schema_name, table_name)
         indexes = self.catalog.callbacks_index(db_name, schema_name, table_name)
 
+        print(">>> VALUES:", values)
+        print(">>> EXPECTED COLUMNS:", len(table.get_tab_columns()))
+
         with HeapFile(table, table_path) as heap:
             position = heap.insert(values)
             for index, pos_column in indexes.values():

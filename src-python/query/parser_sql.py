@@ -96,7 +96,11 @@ def get_column_name(expr: Expression) -> str:
     identifier = params.find(Identifier)
     return identifier.name if identifier else None
 
-def get_copy_info(expr: Expression) -> tuple[str, str, str]:
-    table = expr.args.get("this")
-    filename = expr.args.get("expression")
+def get_copy_info(expr: Expression):
+    table = expr.find(Table)
+    filename = expr.find(Literal)
+    
+    if not table or not filename:
+        raise ValueError("COPY: tabla o filename no reconocidos por el parser")
+
     return table.catalog, table.db, table.name, filename.name

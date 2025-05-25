@@ -51,7 +51,7 @@ query = """
 """
 # se debe manejar los errores si es que ya existen
 admin = PKAdmin()
-admin.execute(select_q)
+admin.execute("COPY ecm.store.employees FROM 'data/empleados.csv';")
 #table = admin.catalog.get_table("ecm", "store", "employees")
 #print(table)
 

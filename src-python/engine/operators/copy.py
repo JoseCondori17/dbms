@@ -19,15 +19,20 @@ class Copy:
         with open(filepath, newline='', encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile)
             for row in reader:
-                values = tuple(self._cast(value, col.get_att_type_id()) 
-                               for value, col in zip(row, table_columns))
-                insert_engine.execute_from_tuple(db, schema, table, values)
+                insert_engine.execute_from_tuple(
+                    db_name=db,
+                    schema_name=schema,
+                    table_name=table,
+                    values=row
+                    )
+                print(">>> ROW:", row)
 
     def _cast(self, value: str, dtype: int):
         try:
             if dtype in [0, 1, 2]:  # SMALLINT, INT, BIGINT
                 return int(value)
             elif dtype == 3:  # DOUBLE
+                print(">>> CASTING TO DOUBLE")
                 return float(value)
             else:
                 return value
