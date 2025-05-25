@@ -3,7 +3,7 @@ import os
 from typing import List, Tuple, Optional, Union, Dict, Any
 
 class TreeNode:
-    def _init_(self, is_leaf: bool, parent_id: int = -1):
+    def __init__(self, is_leaf: bool, parent_id: int = -1):
         self.is_leaf = is_leaf
         self.key_count = 0
         self.parent_id = parent_id
@@ -99,7 +99,7 @@ class BPlusTreeFile:
     HEADER_SIZE = 16 
     NODE_HEADER_SIZE = 12  
     
-    def _init_(self, index_filename: str, max_key_size: int, order: int = 4) -> None:
+    def __init__(self, index_filename: str, max_key_size: int, order: int = 4) -> None:
         self.index_filename = index_filename
         self.order = order  
         self.max_keys = order - 1  
