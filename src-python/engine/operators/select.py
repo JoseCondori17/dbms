@@ -76,6 +76,7 @@ class Select:
             record = heap_file.read_record(pos)
             if record is not None:
                 output.append(record)
+        print("Resultados desde B+Tree:", output)
         return output
 
     def call_isam(): pass
