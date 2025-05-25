@@ -98,8 +98,8 @@ class ISAMFile:
         path.append(current_block_id)
         return path
     
-    def _find_child_block(self, block_id: int, key: str, level: int) -> int:
-        records, _ = self._read_index_block(block_id, level)
+    def _find_child_block(self, block_id: int, key: str) -> int:
+        records, _ = self._read_index_block(block_id)
         if not records:
             return block_id + 1
         
@@ -117,7 +117,7 @@ class ISAMFile:
                 return 0, 0, -1
             return struct.unpack('III', header_data)
     
-    def _read_index_block(self, block_id: int, level: int) -> tuple[list[tuple[str, int]], int]:
+    def _read_index_block(self, block_id: int) -> tuple[list[tuple[str, int]], int]:
         with open(self.index_filename, 'rb') as f:
             f.seek(self._get_block_position(block_id))            
             _, record_count, next_overflow = struct.unpack('III', f.read(self.BLOCK_HEADER_SIZE))
@@ -344,6 +344,6 @@ class ISAMFile:
     
     def _get_block_position(self, block_id: int) -> int:
         return self.HEADER_SIZE + (block_id * self.block_size)
-                                   
+
     def _is_file_empty(self) -> bool:
         return os.path.getsize(self.index_filename) == 0
