@@ -36,6 +36,8 @@ class Select:
             key: str = plan.condition.expression.to_py()
             record = self.call_btree(table, index, path_data, key)
             print(record)
+            # between
+            # inorder [1,2,3,4,5...]
         elif index_type == IndexType.HASH.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()

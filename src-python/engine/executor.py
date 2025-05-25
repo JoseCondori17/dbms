@@ -7,6 +7,7 @@ from engine.planner import login_plan
 from engine.operators.create import Create
 from engine.operators.insert import Insert
 from engine.operators.select import Select
+from engine.operators.delete import Delete
 from engine.operators.copy import Copy
 from catalog.catalog_manager import CatalogManager
 
@@ -35,7 +36,8 @@ class PKAdmin:
                 copy = Copy(self.catalog)
                 result = copy.execute(expr)
             elif isinstance(expr, exp.Delete):
-                pass
+                select = Delete(self.catalog)
+                result = select.execute(expr)
             elif isinstance(expr, exp.Update):
                 pass
             else:

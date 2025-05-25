@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -33,6 +34,9 @@ def get_pkadmin() -> PKAdmin:
 PKAdminDep = Annotated[PKAdmin, Depends(get_pkadmin)]
 
 # //////////////////////////////////////////////////////////////////////
+class Query(BaseModel):
+    query: str
+# //////////////////////////////////////////////////////////////////////
 # api.pk_admin
 @app.get("/databases")
 async def get_databases(pk_admin: PKAdminDep):
@@ -47,6 +51,6 @@ async def get_schemas(pk_admin: PKAdminDep, db_name: str, schema_name: str):
     return pk_admin.catalog.get_tables_json(db_name, schema_name)
 
 @app.post("/execute")
-async def execute_query(pk_admin: PKAdminDep, query: str):
-    result = pk_admin.execute(query)
+async def execute_query(pk_admin: PKAdminDep, body: Query):
+    result = pk_admin.execute(body.query)
     return result
