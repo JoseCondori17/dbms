@@ -97,7 +97,13 @@ class Create:
                 if IndexType[index_type] == IndexType.ISAM:
                     block_factor = 10                    
                     column: Column = table.get_tab_columns()[index_column]
-                    isam_file = ISAMFile(index_filename=path_index, max_key_size=column.get_att_len())
+                    data_type = column.get_att_to_type_id()
+                    max_len_key = column.get_att_len()
+                    isam_file = ISAMFile(
+                        index_filename=path_index, 
+                        data_type=data_type,
+                        max_len_key=max_len_key,
+                    )
 
                     record_id = 0
                     records_processed = 0
@@ -117,7 +123,14 @@ class Create:
 
                 elif IndexType[index_type] == IndexType.BTREE:
                     column: Column = table.get_tab_columns()[index_column]
-                    btree_file = BPlusTreeFile( index_filename=path_index,max_key_size=column.get_att_len(), order=4)                    
+                    data_type = column.get_att_to_type_id()
+                    max_len_key = column.get_att_len()
+                    btree_file = BPlusTreeFile(
+                        index_filename=path_index,
+                        max_key_size=data_type,
+                        max_len_key=max_len_key,
+                        order=4
+                    )                    
                     record_id = 0
                     while True:
                         record_data = heap.read_record(record_id)
@@ -131,7 +144,13 @@ class Create:
 
                 elif IndexType[index_type] == IndexType.HASH:
                     column: Column = table.get_tab_columns()[index_column]
-                    hash_file = ExtendibleHashingFile(index_filename=path_index, max_key_size=column.get_att_len())
+                    data_type = column.get_att_to_type_id()
+                    max_len_key = column.get_att_len()
+                    hash_file = ExtendibleHashingFile(
+                        index_filename=path_index, 
+                        data_type=data_type,
+                        max_len_key=max_len_key
+                    )
 
                     record_id = 0
                     while True:

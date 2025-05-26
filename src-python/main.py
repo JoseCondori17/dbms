@@ -117,7 +117,7 @@ WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
 
 
 admin = PKAdmin()
-admin.execute(query)
+admin.execute(select_q)
 
 
 

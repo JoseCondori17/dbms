@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
-import json
 
 from catalog.database import Database
 from catalog.schema import Schema
@@ -11,10 +10,12 @@ from catalog.column import Column
 from catalog.index import Index
 from storage.disk.path_builder import PathBuilder
 from storage.disk.file_manager import FileManager
+from models.enum.data_type_enum import DataTypeTag
 from models.enum.index_enum import IndexType
 from storage.indexing.rtree_wrapper import RTree
 from storage.indexing.bplus_tree import BPlusTreeFile
 from storage.indexing.hashing import ExtendibleHashingFile
+from storage.indexing.isam import ISAMFile
 
 VERSION = "0.0.1"
 
@@ -240,25 +241,26 @@ class CatalogManager:
         indexes = table.get_tab_indexes()
         callback_cls = {}
 
-        def get_index_by_id(id: int, index_filename: str, key_size: int):
+        def get_index_by_id(id: int, index_filename: str, data_type: DataTypeTag):
             if id == IndexType.SEQUENTIAL.value:
-                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+                return ExtendibleHashingFile(index_filename, data_type=data_type)
             if id == IndexType.AVL.value:
-                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+                return ExtendibleHashingFile(index_filename, data_type=data_type)
             if id == IndexType.ISAM.value:
-                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+                return ISAMFile(index_filename, data_type=data_type)
             if id == IndexType.HASH.value:
-                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+                return ExtendibleHashingFile(index_filename, data_type=data_type)
             if id == IndexType.BTREE.value:
-                return BPlusTreeFile( index_filename=str(index_filename),max_key_size=key_size, order=4)
+                return BPlusTreeFile(index_filename=index_filename, data_type=data_type, order=4)
             if id == IndexType.RTREE.value:
                 return RTree(filename=index_filename)
 
         columns = table.get_tab_columns()
         for index in indexes:
             column_pos = index.get_idx_columns()[0]
+            column = columns[column_pos]
             callback_cls[index.get_idx_id()] = (
-                get_index_by_id(index.get_idx_type(), index.get_idx_file(), columns[column_pos].get_att_len()),
+                get_index_by_id(index.get_idx_type(), index.get_idx_file(), column.get_att_to_type_id()),
                 column_pos
             )
         return callback_cls

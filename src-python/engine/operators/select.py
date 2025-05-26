@@ -4,6 +4,7 @@ from sqlglot import expressions as exp
 from catalog.table import Table
 from catalog.catalog_manager import CatalogManager
 from models.enum.index_enum import IndexType
+from models.enum.data_type_enum import DataTypeTag
 from storage.indexing.heap import HeapFile
 from storage.indexing.hashing import ExtendibleHashingFile
 from storage.indexing.bplus_tree import BPlusTreeFile
@@ -39,13 +40,14 @@ class Select:
         index_type = index.get_idx_type()
 
         if index_type == IndexType.BTREE.value:
+            column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
-            record = self.call_btree(table, index, path_data, key)
+            record = self.call_btree(table, index, path_data, column.get_att_to_type_id() ,key)
             print(record)
         elif index_type == IndexType.HASH.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
-            record = self.call_hash(table, index.get_idx_file(), path_data, column.get_att_len(), key)
+            record = self.call_hash(table, index, path_data, column.get_att_to_type_id(), key)
             print(record)
 
         elif index_type == IndexType.ISAM.value:
@@ -88,22 +90,25 @@ class Select:
             return indexes[0]
         return indexes[pos]
 
-    def call_hash(self, table, index_file, data_file, max_key: int, key: str) -> None:
-        hash_file = ExtendibleHashingFile(index_file, max_key)
+    def call_hash(self, table: Table, index_obj, data_file, data_type: DataTypeTag, key: str) -> None:
+        idx_path   = index_obj.get_idx_file()
+        hash_file = ExtendibleHashingFile(
+            index_filename=str(idx_path), 
+            data_type=data_type
+        )
         heap_file = HeapFile(table, data_file)
+        hash_file.debug_print_structure()
         pos = hash_file.search(key)
         if pos is None:
             return None
         record = heap_file.read_record(pos)
         return record
     
-    def call_btree(self, table: Table, index_obj, data_file: str, key: str):
-        col_pos    = index_obj.get_idx_columns()[0]
-        column     = table.get_tab_columns()[col_pos]
+    def call_btree(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, key: str):
         idx_path   = index_obj.get_idx_file()
         btree = BPlusTreeFile(
             index_filename=str(idx_path),
-            max_key_size=column.get_att_len(),
+            data_type=data_type,
             order=4
         )
         heap = HeapFile(table, data_file)

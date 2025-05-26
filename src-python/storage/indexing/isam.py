@@ -1,18 +1,23 @@
 import struct
 import os
 
+from models.enum.data_type_enum import DataTypeTag
+from storage.disk.data_serializer import DataSerializer
+
 class ISAMFile:
-    HEADER_SIZE = 20  # levels, block_factor, max_key_size, total_blocks, root_blocks
+    HEADER_SIZE = 28  # levels, block_factor, data_type, max_len_key, total_blocks, root_blocks
     BLOCK_HEADER_SIZE = 12  # level, record_count, next_overflow
     
-    def __init__(self, index_filename: str, max_key_size: int, levels: int = 2, block_factor: int = 10):
+    def __init__(self, index_filename: str, data_type: DataTypeTag, max_len_key: int = 0, levels: int = 2, block_factor: int = 10):
         self.index_filename = index_filename
-        self.max_key_size = max_key_size
+        self.data_type = data_type
+        self.max_len_key = max_len_key
         self.levels = levels
         self.block_factor = block_factor
         
-        self.key_record_size = self.max_key_size + 4  # for leaf 
-        self.index_record_size = self.max_key_size + 4  # for index levels
+        self.key_size = DataSerializer.get_size(data_type, max_len_key)
+        self.key_record_size = self.key_size + 4  # for leaf 
+        self.index_record_size = self.key_size + 4  # for index levels
         self.record_size = max(self.key_record_size, self.index_record_size)
         
         self.block_size = self.BLOCK_HEADER_SIZE + (self.block_factor * self.record_size)
@@ -26,10 +31,7 @@ class ISAMFile:
             self._load_header()
     
     # main functions
-    def insert(self, key: str, data_position: int) -> bool:
-        if len(key) > self.max_key_size:
-            return False
-        
+    def insert(self, key: any, data_position: int) -> bool:
         path = self._find_leaf_path(key)
         leaf_block_id = path[-1]
         
@@ -38,7 +40,7 @@ class ISAMFile:
         
         return self._handle_leaf_overflow(leaf_block_id, key, data_position)
     
-    def delete(self, key: str) -> int | None:
+    def delete(self, key: any) -> int | None:
         path = self._find_leaf_path(key)
         leaf_block_id = path[-1]
         
@@ -48,7 +50,7 @@ class ISAMFile:
         
         return self._delete_from_overflow_chain(leaf_block_id, key)
     
-    def search(self, key: str) -> int | None:
+    def search(self, key: any) -> int | None:
         path = self._find_leaf_path(key)
         leaf_block_id = path[-1]
         
@@ -77,9 +79,9 @@ class ISAMFile:
                 for level in range(self.levels - 1):
                     next_block_id = block_id + 1
                     if level == self.levels - 2:
-                        self._write_index_block(f, level, [("", next_block_id)])
+                        self._write_index_block(f, level, [(None, next_block_id)])
                     else:
-                        self._write_index_block(f, level, [("", next_block_id)])
+                        self._write_index_block(f, level, [(None, next_block_id)])
                     block_id += 1
                 
                 self._write_empty_leaf_block(f, self.levels - 1)
@@ -87,7 +89,7 @@ class ISAMFile:
         
         self._save_header()
     
-    def _find_leaf_path(self, key: str) -> list[int]:
+    def _find_leaf_path(self, key: any) -> list[int]:
         path = []
         current_block_id = 0
         
@@ -98,13 +100,13 @@ class ISAMFile:
         path.append(current_block_id)
         return path
     
-    def _find_child_block(self, block_id: int, key: str) -> int:
+    def _find_child_block(self, block_id: int, key: any, level: int) -> int:
         records, _ = self._read_index_block(block_id)
         if not records:
             return block_id + 1
         
         for _, (index_key, child_block) in enumerate(records):
-            if not index_key or key <= index_key:
+            if index_key is None or key <= index_key:
                 return child_block
         
         return records[-1][1]
@@ -117,7 +119,7 @@ class ISAMFile:
                 return 0, 0, -1
             return struct.unpack('III', header_data)
     
-    def _read_index_block(self, block_id: int) -> tuple[list[tuple[str, int]], int]:
+    def _read_index_block(self, block_id: int) -> tuple[list[tuple[any, int]], int]:
         with open(self.index_filename, 'rb') as f:
             f.seek(self._get_block_position(block_id))            
             _, record_count, next_overflow = struct.unpack('III', f.read(self.BLOCK_HEADER_SIZE))
@@ -129,12 +131,12 @@ class ISAMFile:
                     break
                 
                 key, block_pointer = self._unpack_index_record(record_data)
-                if key or block_pointer > 0:
+                if key is not None or block_pointer > 0:
                     records.append((key, block_pointer))
             
             return records, next_overflow
     
-    def _read_leaf_block(self, block_id: int) -> tuple[list[tuple[str, int]], int]:
+    def _read_leaf_block(self, block_id: int) -> tuple[list[tuple[any, int]], int]:
         with open(self.index_filename, 'rb') as f:
             f.seek(self._get_block_position(block_id))
             _, record_count, next_overflow = struct.unpack('III', f.read(self.BLOCK_HEADER_SIZE))
@@ -146,12 +148,12 @@ class ISAMFile:
                     break
                 
                 key, data_offset = self._unpack_data_record(record_data)
-                if key:
+                if key is not None:
                     records.append((key, data_offset))
             
             return records, next_overflow
     
-    def _write_index_block(self, f, level: int, records: list[tuple[str, int]], next_overflow: int = -1):
+    def _write_index_block(self, f, level: int, records: list[tuple[any, int]], next_overflow: int = -1):
         f.write(struct.pack('III', level, len(records), next_overflow))
         for key, block_pointer in records:
             record_data = self._pack_index_record(key, block_pointer)
@@ -161,7 +163,7 @@ class ISAMFile:
         for _ in range(remaining):
             f.write(b'\0' * self.record_size)
     
-    def _write_leaf_block(self, f, level: int, records: list[tuple[str, int]], next_overflow: int = -1):
+    def _write_leaf_block(self, f, level: int, records: list[tuple[any, int]], next_overflow: int = -1):
         f.write(struct.pack('III', level, len(records), next_overflow))        
         for key, data_offset in records:
             record_data = self._pack_data_record(key, data_offset)
@@ -174,7 +176,7 @@ class ISAMFile:
     def _write_empty_leaf_block(self, f, level: int):
         self._write_leaf_block(f, level, [], -1)
     
-    def _insert_in_leaf_block(self, block_id: int, key: str, data_position: int) -> bool:
+    def _insert_in_leaf_block(self, block_id: int, key: any, data_position: int) -> bool:
         records, next_overflow = self._read_leaf_block(block_id)
         
         for i, (existing_key, _) in enumerate(records):
@@ -185,18 +187,18 @@ class ISAMFile:
         
         if len(records) < self.block_factor:
             records.append((key, data_position))
-            records.sort(key=lambda x: x[0])
+            records.sort(key=lambda x: x[0] if x[0] is not None else float('inf'))
             self._write_leaf_block_at_position(block_id, records, next_overflow)
             return True
         
         return False
     
-    def _write_leaf_block_at_position(self, block_id: int, records: list[tuple[str, int]], next_overflow: int = -1):
+    def _write_leaf_block_at_position(self, block_id: int, records: list[tuple[any, int]], next_overflow: int = -1):
         with open(self.index_filename, 'r+b') as f:
             f.seek(self._get_block_position(block_id))
             self._write_leaf_block(f, self.levels - 1, records, next_overflow)
     
-    def _handle_leaf_overflow(self, leaf_block_id: int, key: str, data_position: int) -> bool:
+    def _handle_leaf_overflow(self, leaf_block_id: int, key: any, data_position: int) -> bool:
         records, next_overflow = self._read_leaf_block(leaf_block_id)
         
         if next_overflow == -1:
@@ -213,7 +215,7 @@ class ISAMFile:
         
         return self._insert_in_overflow_chain(next_overflow, key, data_position)
     
-    def _insert_in_overflow_chain(self, overflow_block_id: int, key: str, data_position: int) -> bool:
+    def _insert_in_overflow_chain(self, overflow_block_id: int, key: any, data_position: int) -> bool:
         current_block = overflow_block_id
         
         while current_block != -1:
@@ -227,7 +229,7 @@ class ISAMFile:
             
             if len(records) < self.block_factor:
                 records.append((key, data_position))
-                records.sort(key=lambda x: x[0])
+                records.sort(key=lambda x: x[0] if x[0] is not None else float('inf'))
                 self._write_leaf_block_at_position(current_block, records, next_overflow)
                 return True
             
@@ -249,101 +251,100 @@ class ISAMFile:
         
         return False
     
-    def _search_in_leaf_block(self, block_id: int, key: str) -> int | None:
+    def _search_in_leaf_block(self, block_id: int, key: any) -> int | None:
         records, _ = self._read_leaf_block(block_id)
-        
-        for record_key, data_position in records:
-            if record_key == key:
+        for existing_key, data_position in records:
+            if existing_key == key:
                 return data_position
-        
         return None
     
-    def _search_in_overflow_chain(self, leaf_block_id: int, key: str) -> int | None:
-        _, next_overflow = self._read_leaf_block(leaf_block_id)
-        
-        current_block = next_overflow
+    def _search_in_overflow_chain(self, leaf_block_id: int, key: any) -> int | None:
+        current_block = leaf_block_id
         while current_block != -1:
             records, next_overflow = self._read_leaf_block(current_block)
-            
-            for record_key, data_position in records:
-                if record_key == key:
+            for existing_key, data_position in records:
+                if existing_key == key:
                     return data_position
-            
             current_block = next_overflow
-        
         return None
     
-    def _delete_from_leaf_block(self, block_id: int, key: str) -> int | None:
+    def _delete_from_leaf_block(self, block_id: int, key: any) -> int | None:
         records, next_overflow = self._read_leaf_block(block_id)
-        
-        for i, (record_key, data_position) in enumerate(records):
-            if record_key == key:
+        for i, (existing_key, data_position) in enumerate(records):
+            if existing_key == key:
                 records.pop(i)
                 self._write_leaf_block_at_position(block_id, records, next_overflow)
                 return data_position
-        
         return None
     
-    def _delete_from_overflow_chain(self, leaf_block_id: int, key: str) -> int | None:
-        _, next_overflow = self._read_leaf_block(leaf_block_id)
-        current_block = next_overflow
+    def _delete_from_overflow_chain(self, leaf_block_id: int, key: any) -> int | None:
+        current_block = leaf_block_id
         while current_block != -1:
             records, next_overflow = self._read_leaf_block(current_block)
-            
-            for i, (record_key, data_position) in enumerate(records):
-                if record_key == key:
+            for i, (existing_key, data_position) in enumerate(records):
+                if existing_key == key:
                     records.pop(i)
                     self._write_leaf_block_at_position(current_block, records, next_overflow)
                     return data_position
-                
             current_block = next_overflow
-        
         return None
     
-    def _pack_index_record(self, key: str, block_pointer: int) -> bytes:
-        key_bytes = key.encode('utf-8') if key else b''
-        if len(key_bytes) > self.max_key_size:
-            key_bytes = key_bytes[:self.max_key_size]
-        
-        padded_key = key_bytes.ljust(self.max_key_size, b'\0')
-        return padded_key + struct.pack('I', block_pointer)
+    def _pack_index_record(self, key: any, block_pointer: int) -> bytes:
+        if key is None:
+            key_bytes = b'\0' * self.key_size
+        else:
+            key_bytes = DataSerializer.serialize(key, self.data_type, self.max_len_key)
+        return key_bytes + struct.pack('I', block_pointer)
     
-    def _unpack_index_record(self, record_bytes: bytes) -> tuple[str, int]:
-        key_bytes = record_bytes[:self.max_key_size].rstrip(b'\0')
-        key = key_bytes.decode('utf-8') if key_bytes else ""
-        block_pointer = struct.unpack('I', record_bytes[self.max_key_size:])[0]
+    def _unpack_index_record(self, record_bytes: bytes) -> tuple[any, int]:
+        key_bytes = record_bytes[:self.key_size]
+        block_pointer = struct.unpack('I', record_bytes[self.key_size:])[0]
+        
+        if all(b == 0 for b in key_bytes):
+            return None, block_pointer
+            
+        key = DataSerializer.deserialize(key_bytes, self.data_type, self.max_len_key)
         return key, block_pointer
     
-    def _pack_data_record(self, key: str, data_offset: int) -> bytes:
-        key_bytes = key.encode('utf-8')
-        if len(key_bytes) > self.max_key_size:
-            key_bytes = key_bytes[:self.max_key_size]
-        
-        padded_key = key_bytes.ljust(self.max_key_size, b'\0')
-        return padded_key + struct.pack('I', data_offset)
+    def _pack_data_record(self, key: any, data_offset: int) -> bytes:
+        if key is None:
+            key_bytes = b'\0' * self.key_size
+        else:
+            key_bytes = DataSerializer.serialize(key, self.data_type, self.max_len_key)
+        return key_bytes + struct.pack('I', data_offset)
     
-    def _unpack_data_record(self, record_bytes: bytes) -> tuple[str, int]:
-        key_bytes = record_bytes[:self.max_key_size].rstrip(b'\0')
-        key = key_bytes.decode('utf-8')
-        data_offset = struct.unpack('I', record_bytes[self.max_key_size:])[0]
+    def _unpack_data_record(self, record_bytes: bytes) -> tuple[any, int]:
+        key_bytes = record_bytes[:self.key_size]
+        data_offset = struct.unpack('I', record_bytes[self.key_size:])[0]
+        
+        if all(b == 0 for b in key_bytes):
+            return None, data_offset
+            
+        key = DataSerializer.deserialize(key_bytes, self.data_type, self.max_len_key)
         return key, data_offset
     
     def _write_header(self, f):
-        f.write(struct.pack('IIIII', self.levels, self.block_factor, self.max_key_size, self.total_blocks, self.root_blocks))
+        f.write(struct.pack('IIIIIII', self.levels, self.block_factor, self.data_type.value, 
+                          self.max_len_key, self.total_blocks, self.root_blocks, 0))
     
     def _load_header(self):
         with open(self.index_filename, 'rb') as f:
             header_data = f.read(self.HEADER_SIZE)
-            (self.levels, self.block_factor, self.max_key_size, 
-             self.total_blocks, self.root_blocks) = struct.unpack('IIIII', header_data)
+            self.levels, self.block_factor, data_type_value, self.max_len_key, self.total_blocks, self.root_blocks, _ = struct.unpack('IIIIIII', header_data)
+            self.data_type = DataTypeTag(data_type_value)
     
     def _save_header(self):
         with open(self.index_filename, 'r+b') as f:
             f.seek(0)
-            self._write_header(f)
+            f.write(struct.pack('IIIIIII', self.levels, self.block_factor, self.data_type.value,
+                              self.max_len_key, self.total_blocks, self.root_blocks, 0))
     
     def _get_block_position(self, block_id: int) -> int:
         return self.HEADER_SIZE + (block_id * self.block_size)
 
     def _is_file_empty(self) -> bool:
+        if not os.path.exists(self.index_filename):
+            with open(self.index_filename, 'wb') as f:
+                pass
+            return True
         return os.path.getsize(self.index_filename) == 0

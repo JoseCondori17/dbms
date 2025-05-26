@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from sqlglot import expressions as exp
 
 from query.parser_sql import parser_sql
-from engine.planner import login_plan
 from engine.operators.create import Create
 from engine.operators.insert import Insert
 from engine.operators.select import Select

@@ -28,5 +28,5 @@ class DataTypeSize(IntEnum):
     DATE        = 4
     TIME        = 8
     TIMESTAMP   = 8
-    GEOMETRIC   = 0
-    JSON        = 0
+    GEOMETRIC   = 32
+    JSON        = 1024
