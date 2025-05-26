@@ -7,7 +7,7 @@ from catalog.column import Column
 from storage.indexing.heap import HeapFile
 from storage.indexing.isam import ISAMFile
 from storage.indexing.hashing import ExtendibleHashingFile
-from storage.indexing.btree import BTreeFile
+from storage.indexing.bplus_tree import BPlusTreeFile
 from models.enum.index_enum import IndexType
 from query.parser_sql import (
     get_table_catalog,
@@ -27,15 +27,19 @@ class Create:
         fn = expr.args.get("kind")
         if fn == "TABLE":
             self._create_table(expr)
+            return "table created"
         elif fn == "INDEX":
             self._create_index(expr)
+            return "index created"
         elif fn == "SCHEMA":
             self.catalog.create_schema(
                 db_name=get_table_catalog(expr), 
                 schema_name=get_table_schema(expr)
             )
+            return "schema created"
         elif fn == "DATABASE":
             self.catalog.create_database(db_name=get_name(expr))
+            return "database created"
         else:
             raise ValueError(f"Unknown create kind: {fn}")
         
@@ -113,7 +117,7 @@ class Create:
 
                 elif IndexType[index_type] == IndexType.BTREE:
                     column: Column = table.get_tab_columns()[index_column]
-                    btree_file = BTreeFile(index_filename=path_index)
+                    btree_file = BPlusTreeFile( index_filename=path_index,max_key_size=column.get_att_len(), order=4)                    
                     record_id = 0
                     while True:
                         record_data = heap.read_record(record_id)
@@ -121,7 +125,7 @@ class Create:
                             break
                         data_tuple, is_active = record_data
                         if is_active:
-                            key = str(data_tuple[index_column])
+                            key = data_tuple[index_column]
                             btree_file.insert(key, record_id)
                         record_id += 1
 
@@ -141,5 +145,8 @@ class Create:
                         record_id += 1
 
                 elif IndexType[index_type] == IndexType.RTREE:
+                    pass
+
+                elif IndexType[index_type] == IndexType.AVL:
                     pass
             print(index_type)

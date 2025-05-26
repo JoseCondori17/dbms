@@ -2,35 +2,35 @@ from engine.executor import PKAdmin
 from query.parser_sql import parser_sql, get_values
 
 
-# create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
-# select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Eva Liu';"
-# select_q_btr = "SELECT name FROM ecm.store.employees WHERE id = 34;"
-# database_q = "CREATE DATABASE ecm"
-# schema_q = "CREATE SCHEMA ecm.store"
-# set_q = "SET search_path TO ecm.store"
-# index_q = "CREATE INDEX idx_name ON ecm.store.employees USING hash(name)"
-# insert_q = """
-#     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
-#     (1, 'John Doe', 500.00), 
-#     (2, 'Jose Ede', 320.22),
-#     (3, 'Alice Smith', 450.75),
-#     ...
-#     (60, 'Hazel Peterson', 420.50);
-# """
-# copy_q = "COPY ecm.store.employees FROM 'data/empleados.csv';"
+create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
+select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Eva Liu';"
+select_q_btr = "SELECT name FROM ecm.store.employees WHERE id = 34;"
+database_q = "CREATE DATABASE ecm"
+schema_q = "CREATE SCHEMA ecm.store"
+set_q = "SET search_path TO ecm.store"
+index_q = "CREATE INDEX idx_name ON ecm.store.employees USING hash(name)"
+insert_q = """
+    INSERT INTO ecm.store.employees (id, name, salary) VALUES 
+    (1, 'John Doe', 500.00), 
+    (2, 'Jose Ede', 320.22),
+    (3, 'Alice Smith', 450.75),
+    ...
+    (60, 'Hazel Peterson', 420.50);
+"""
+copy_q = "COPY ecm.store.employees FROM 'data/empleados.csv';"
 
-# query = """
-#     CREATE DATABASE ecm;
-#     CREATE SCHEMA ecm.store;
-#     CREATE TABLE ecm.store.employees (
-#         id INT,
-#         name VARCHAR(50), 
-#         salary DOUBLE
-#     );
-#     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
-#     (1, 'John Doe', 500.00),
-#     ...
-#     (60, 'Hazel Peterson', 420.50);
+query = """
+    CREATE DATABASE ecm;
+    CREATE SCHEMA ecm.store;
+    CREATE TABLE ecm.store.employees (
+        id INT,
+        name VARCHAR(50), 
+        salary DOUBLE
+    );
+    INSERT INTO ecm.store.employees (id, name, salary) VALUES 
+    (1, 'John Doe', 500.00),
+    ...
+    (60, 'Hazel Peterson', 420.50);
 # """
 
 
@@ -63,6 +63,7 @@ admin = PKAdmin()
 
 print("\n--- Ejecutando bloque: ciudades + RTree ---\n")
 admin.execute(rtree_query)
+
 
 
 # admin.execute(database_q)

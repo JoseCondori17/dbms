@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Dict, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
+import json
 
 from catalog.database import Database
 from catalog.schema import Schema
@@ -12,16 +12,16 @@ from catalog.index import Index
 from storage.disk.path_builder import PathBuilder
 from storage.disk.file_manager import FileManager
 from models.enum.index_enum import IndexType
-
 from storage.indexing.btree import BTreeFile
 from storage.indexing.rtree_wrapper import RTree
+from storage.indexing.bplus_tree import BPlusTreeFile
 from storage.indexing.hashing import ExtendibleHashingFile
 
 VERSION = "0.0.1"
 
 @dataclass
 class GlobalCatalog:
-    databases: Dict[str, Database]
+    databases: dict[str, Database]
     version: str
     created_at: datetime
 
@@ -164,22 +164,50 @@ class CatalogManager:
 
     def get_database_names(self) -> list[str]:
         return list(self.global_catalog.databases.keys())
-    
-    def get_schemas_dict(self, db_name: str) -> Dict[str, int]:
+
+    def get_databases_json(self) -> str:
+        result = []
+        for db_name, db in self.global_catalog.databases.items():
+            db_dict = asdict(db)
+            if isinstance(db_dict.get("db_created_at"), datetime):
+                db_dict["db_created_at"] = db_dict["db_created_at"].isoformat()
+            result.append(db_dict)
+        return result
+
+    def get_schemas_dict(self, db_name: str) -> dict[str, int]:
         database = self.global_catalog.databases[db_name]
         return database.get_schemas()
     
-    def get_schema(self, db_name: str, schema_name: str) -> Optional[Schema]:
+    def get_schema(self, db_name: str, schema_name: str) -> Schema | None:
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         return self.file_manager.read_data(path_sh_meta)
     
-    def get_table(self, db_name: str, schema_name: str, table_name: str) -> Optional[Table]:
+    def get_schemas(self, db_name: str) -> list[Schema]:
+        schemas = []
+        for schema_name in self.get_schemas_dict(db_name).keys():
+            path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
+            schema: Schema = self.file_manager.read_data(path_sh_meta)
+            schemas.append(schema)
+        return schemas
+    
+    def get_schemas_json(self, db_name: str) -> str:
+        schemas = self.get_schemas(db_name)
+        result = []
+        for schema in schemas:
+            schema_dict = asdict(schema)
+            result.append(schema_dict)
+        return result
+
+    def get_schemas_name(self, db_name: str) -> list[str]:
+        schemas = self.get_schemas(db_name)
+        return [schema.get_name() for schema in schemas]
+
+    def get_table(self, db_name: str, schema_name: str, table_name: str) -> Table | None:
         path_tab_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
         table: Table = self.file_manager.read_data(path_tab_meta)
         return table
 
     def get_tables(self, db_name: str, schema_name: str) -> list[Table]:
-        database = self.global_catalog.databases[db_name]
         schema = self.path_builder.schema_meta(db_name, schema_name)
         schema_meta: Schema = self.file_manager.read_data(schema)
         tables = []
@@ -189,7 +217,19 @@ class CatalogManager:
             tables.append(table)
         return tables
     
-    def get_position_column_by_name(self, db_name: str, schema_name: str, table_name: str, column_name: str) -> Optional[int]:
+    def get_tables_json(self, db_name: str, schema_name: str):
+        tables = self.get_tables(db_name, schema_name)
+        result = []
+        for table in tables:
+            table_dict = asdict(table)
+            result.append(table_dict)
+        return result
+
+    def get_tables_name(self, db_name: str, schema_name: str) -> list[str]:
+        tables = self.get_tables(db_name, schema_name)
+        return [table.get_tab_name() for table in tables]
+
+    def get_position_column_by_name(self, db_name: str, schema_name: str, table_name: str, column_name: str) -> int | None:
         table: Table = self.get_table(db_name, schema_name, table_name)
         for i, column in enumerate(table.get_tab_columns()):
             if column.get_att_name() == column_name:
@@ -211,7 +251,7 @@ class CatalogManager:
             if id == IndexType.HASH.value:
                 return ExtendibleHashingFile(index_filename, max_key_size=key_size)
             if id == IndexType.BTREE.value:
-                return BTreeFile(index_filename=index_filename)
+                return BPlusTreeFile( index_filename=str(index_filename),max_key_size=key_size, order=4)
             if id == IndexType.RTREE.value:
                 return RTree(filename=index_filename)
 

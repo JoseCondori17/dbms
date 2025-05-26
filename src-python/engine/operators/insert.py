@@ -54,4 +54,4 @@ class Insert:
                 position = heap.insert(value)
                 # update all indexes
                 for index, pos_column in indexes.values():
-                    index.insert(str(value[pos_column]), position)
+                    index.insert(str(value[pos_column]), position) # here

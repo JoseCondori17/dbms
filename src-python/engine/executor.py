@@ -7,6 +7,7 @@ from engine.planner import login_plan
 from engine.operators.create import Create
 from engine.operators.insert import Insert
 from engine.operators.select import Select
+from engine.operators.delete import Delete
 from engine.operators.copy import Copy
 from catalog.catalog_manager import CatalogManager
 
@@ -17,25 +18,28 @@ class PKAdmin:
 
     def execute(self, sql: str) -> None:
         exprs = parser_sql(sql)
+        result = None
         for expr in exprs:
             if isinstance(expr, exp.Set):
                 # SET SEARCH PATH
                 pass
             elif isinstance(expr, exp.Create):
                 create = Create(self.catalog)
-                create.execute(expr)
+                result = create.execute(expr)
             elif isinstance(expr, exp.Insert):
                 insert = Insert(self.catalog)
-                insert.execute(expr)
+                result = insert.execute(expr)
             elif isinstance(expr, exp.Select):
                 select = Select(self.catalog)
-                select.execute(expr)
+                result = select.execute(expr)
             elif isinstance(expr, exp.Copy):
                 copy = Copy(self.catalog)
-                copy.execute(expr)
+                result = copy.execute(expr)
             elif isinstance(expr, exp.Delete):
-                pass
+                select = Delete(self.catalog)
+                result = select.execute(expr)
             elif isinstance(expr, exp.Update):
                 pass
             else:
                 print(f"Undefined: {type(expr)}")
+        return result

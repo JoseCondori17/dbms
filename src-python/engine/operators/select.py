@@ -6,7 +6,7 @@ from catalog.catalog_manager import CatalogManager
 from models.enum.index_enum import IndexType
 from storage.indexing.heap import HeapFile
 from storage.indexing.hashing import ExtendibleHashingFile
-from storage.indexing.btree import BTreeFile
+from storage.indexing.bplus_tree import BPlusTreeFile
 from storage.indexing.isam import ISAMFile
 from engine.planner import login_plan
 from query.parser_sql import (
@@ -40,9 +40,8 @@ class Select:
 
         if index_type == IndexType.BTREE.value:
             key: str = plan.condition.expression.to_py()
-            record = self.call_btree(table, index.get_idx_file(), path_data, key)
+            record = self.call_btree(table, index, path_data, key)
             print(record)
-
         elif index_type == IndexType.HASH.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
@@ -94,4 +93,17 @@ class Select:
         heap_file = HeapFile(table, data_file)
         pos = hash_file.search(key)
         if pos is None:
+            return None
+        record = heap_file.read_record(pos)
+        return record
+    
+    def call_btree(self, table, index_file, data_file, key: str):
+        btree_file = BTreeFile(index_filename=index_file)
+        heap_file = HeapFile(table, data_file)
+        pos = btree_file.search(key)
+        if pos is None:
+            return None
+        record = heap_file.read_record(pos)
+        return record
 
+    def call_isam(): pass
