@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from sqlglot import expressions as exp
-
+from storage.indexing.avl import AVLFile
 from catalog.table import Table
 from catalog.catalog_manager import CatalogManager
 from models.enum.index_enum import IndexType
@@ -54,6 +54,11 @@ class Select:
             records = self.call_isam()
             print(records)
 
+        elif index_type == IndexType.AVL.value:
+            result = self.call_avl(table, index, path_data, plan.condition)# llamando a avl index 
+            print(result)
+
+
         elif index_type == IndexType.RTREE.value:
             heap_file = HeapFile(table, path_data)
             try:
@@ -76,17 +81,33 @@ class Select:
 
             except Exception as e:
                 print("Error en la ejecución con RTree:", e)
+                
+# def get_index(self, column_name: str, table: Table):
+#     pos = 0
+#     for i, column in enumerate(table.get_tab_columns()):
+#         if column.get_att_name() == column_name:
+#             pos = i
+#             break
+#     indexes = table.get_tab_indexes()
+#     if (pos + 1) > len(indexes):
+#         return indexes[0]
+#     return indexes[pos]
 
     def get_index(self, column_name: str, table: Table):
-        pos = 0
-        for i, column in enumerate(table.get_tab_columns()):
-            if column.get_att_name() == column_name:
-                pos = i
-                break
         indexes = table.get_tab_indexes()
-        if (pos + 1) > len(indexes):
-            return indexes[0]
-        return indexes[pos]
+
+        print(f"[DEBUG] Buscando índice para columna: '{column_name}'")
+        for index in indexes:
+            col_pos = index.get_idx_columns()[0]
+            column = table.get_tab_columns()[col_pos]
+            print(f"[DEBUG] Verificando índice '{index.get_idx_name()}' en columna '{column.get_att_name()}' (tipo: {index.get_idx_type()})")
+            
+            if column.get_att_name() == column_name:
+                print(f"[DEBUG] ¡Índice encontrado!: {index.get_idx_name()} (tipo {index.get_idx_type()})")
+                return index
+
+        print("[DEBUG] No se encontró índice exacto. Usando el primero si existe.")
+        return indexes[0] if indexes else None
 
     def call_hash(self, table, index_file, data_file, max_key: int, key: str) -> None:
         hash_file = ExtendibleHashingFile(index_file, max_key)
@@ -111,3 +132,35 @@ class Select:
         return None if pos is None else heap.read_record(pos)
 
     def call_isam(): pass
+    
+    # AVL Indexing
+    def call_avl(self, table: Table, index_obj, data_file: str, plan_condition) -> list:
+
+        col_pos = index_obj.get_idx_columns()[0]
+        column = table.get_tab_columns()[col_pos]
+        key_size = column.get_att_len()
+
+        avl = AVLFile(index_obj.get_idx_file(), max_key_size=key_size)
+        heap = HeapFile(table, data_file)
+
+        # Búsqueda por igualdad
+        if plan_condition.__class__.__name__ == "Condition":
+            key = str(plan_condition.expression.to_py())
+            pos = avl.search(key)
+            print(f"[DEBUG] Buscando key: {key}, posición encontrada: {pos}")
+
+            return None if pos is None else heap.read_record(pos)
+
+        # Búsqueda por rango
+        elif plan_condition.__class__.__name__ == "Between":
+            low = str(plan_condition.args["low"].to_py())
+            high = str(plan_condition.args["high"].to_py())
+            result = []
+            keys = avl.range_search(low, high)
+            for key in keys:
+                pos = avl.search(key)
+                if pos is not None:
+                    record = heap.read_record(pos)
+                    result.append(record)
+            return result
+        return None

@@ -1,5 +1,6 @@
 from dataclasses import dataclass 
 from sqlglot import expressions as exp
+from storage.indexing.avl import AVLFile
 import os
 
 from catalog.catalog_manager import CatalogManager
@@ -61,7 +62,7 @@ class Create:
             schema_name=schema_name,
             table_name=table_name,
             index_name=index_default_name,
-            index_type=IndexType.BTREE.value,
+            index_type=IndexType.AVL.value, #CAMBIE ESTO POR EL BTREE
             index_colum=0,
             index_is_primary=True,
         )
@@ -147,6 +148,25 @@ class Create:
                 elif IndexType[index_type] == IndexType.RTREE:
                     pass
 
-                elif IndexType[index_type] == IndexType.AVL:
-                    pass
+                elif IndexType[index_type] == IndexType.AVL: #cambio index type
+                    
+                    column: Column = table.get_tab_columns()[index_column]
+                    avl_file = AVLFile(filename=path_index, max_key_size=column.get_att_len()) #cambio index type
+
+
+                    record_id = 0
+                    while True:
+                        record_data = heap.read_record(record_id)
+                        if record_data is None:
+                            break
+                        data_tuple, is_active = record_data
+                        if is_active:
+                            key = str(data_tuple[index_column])  # asegúrate de pasar str
+                            avl_file.insert(key, record_id)
+                        record_id += 1
+
+
+
             print(index_type)
+            print(f"[DEBUG] Índice '{index_name}' creado con tipo {IndexType[index_type].name} ({IndexType[index_type].value})")
+           #debuguenaod xd

@@ -50,8 +50,9 @@ class Insert:
         with HeapFile(table, table_path) as heap:
             values = get_values(expr)
             for value in values:
-                value = to_tuple(value)
+                value = tuple(str(v) for v in to_tuple(value))  # fuerza todos los campos a str
                 position = heap.insert(value)
+
                 # update all indexes
                 for index, pos_column in indexes.values():
-                    index.insert(value[pos_column], position) # here
+                    index.insert(str(value[pos_column]), position) #cambio string

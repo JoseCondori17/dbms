@@ -1,32 +1,24 @@
+
+
 from engine.executor import PKAdmin
-from query.parser_sql import parser_sql, get_values
 
+admin = PKAdmin()
 
-create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
-select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Eva Liu';"
-select_q_btr = "SELECT name FROM ecm.store.employees WHERE id = 34;"
-database_q = "CREATE DATABASE ecm"
-schema_q = "CREATE SCHEMA ecm.store"
-set_q = "SET search_path TO ecm.store"
-index_q = "CREATE INDEX idx_name ON ecm.store.employees USING hash(name)"
-insert_q = """
-    INSERT INTO ecm.store.employees (id, name, salary) VALUES 
-    (1, 'John Doe', 500.00), 
-    (2, 'Jose Ede', 320.22),
-    (3, 'Alice Smith', 450.75),
-    ...
-    (60, 'Hazel Peterson', 420.50);
-"""
-copy_q = "COPY ecm.store.employees FROM 'data/empleados.csv';"
+# Crear base de datos y esquema
+admin.execute("CREATE DATABASE ecm;")
+admin.execute("CREATE SCHEMA ecm.store;")
 
-query = """
-    CREATE DATABASE ecm;
-    CREATE SCHEMA ecm.store;
+# Crear tabla
+admin.execute("""
     CREATE TABLE ecm.store.employees (
         id INT,
         name VARCHAR(50), 
         salary DOUBLE
     );
+""")
+
+# Insertar registros
+insert_q = """
     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
     (1, 'John Doe', 500.00), 
     (2, 'Jose Ede', 320.22),
@@ -67,72 +59,16 @@ query = """
     (37, 'James Turner', 380.45),
     (38, 'Katherine Phillips', 520.10),
     (39, 'Leo Campbell', 450.60),
-    (40, 'Mona Parker', 510.75),
-    (41, 'Oscar Evans', 330.20),
-    (42, 'Patricia Collins', 480.90),
-    (43, 'Quentin Stewart', 570.40),
-    (44, 'Rita Sanchez', 400.65),
-    (45, 'Steve Morris', 540.25),
-    (46, 'Tiffany Rogers', 460.50),
-    (47, 'Ulysses Reed', 490.85),
-    (48, 'Valerie Cook', 430.30),
-    (49, 'Walter Morgan', 580.75),
-    (50, 'Xena Bell', 410.90),
-    (51, 'Yosef Murphy', 550.40),
-    (52, 'Zoe Bailey', 370.60),
-    (53, 'Aaron Rivera', 500.85),
-    (54, 'Bianca Cooper', 440.20),
-    (55, 'Cameron Richardson', 590.30),
-    (56, 'Diana Cox', 390.45),
-    (57, 'Ethan Howard', 530.70),
-    (58, 'Fiona Ward', 460.25),
-    (59, 'George Torres', 480.90),
-    (60, 'Hazel Peterson', 420.50);
+    (40, 'Mona Parker', 510.75);
 """
+admin.execute(insert_q)
+
+# Crear índice AVL sobre la columna 'id'
+admin.execute("CREATE INDEX idx_id_avl_fix ON ecm.store.employees USING avl(id);")
 
 
-rtree_query = """
-CREATE DATABASE geo;
-CREATE SCHEMA geo.public;
+# SELECT por igualdad (debe devolver un registro)
+#admin.execute("SELECT name FROM ecm.store.employees WHERE id = 34;")
 
-CREATE TABLE geo.public.ciudades (
-    id INT,
-    name VARCHAR(50),
-    latitude DOUBLE,
-    longitude DOUBLE
-);
-
-INSERT INTO geo.public.ciudades (id, name, latitude, longitude) VALUES
-(1, 'Lima', -12.0464, -77.0428),
-(2, 'Cusco', -13.532, -71.967),
-(3, 'Arequipa', -16.409, -71.537),
-(4, 'Puno', -15.843, -70.021),
-(5, 'Trujillo', -8.112, -79.028);
-
-CREATE INDEX idx_ubicacion ON geo.public.ciudades USING rtree(latitude);
-
-SELECT name FROM geo.public.ciudades 
-WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
-"""
-
-
-admin = PKAdmin()
-admin.execute(query)
-
-
-
-# admin.execute(database_q)
-# admin.execute(schema_q)
-# admin.execute(create_q)
-# admin.execute(index_q)
-# admin.execute(insert_q)
-# admin.execute(select_q)
-# admin.execute(query)
-# admin.execute(select_q_btr)
-
-# table = admin.catalog.get_table("ecm", "store", "employees")
-# print(table)
-
-"""
-logic plan: https://medium.com/@harun.raseed093/spark-logical-and-physical-plans-e111de6cc22e
-"""
+# SELECT con BETWEEN (debe devolver varios)
+#admin.execute("SELECT name FROM ecm.store.employees WHERE id BETWEEN 30 AND 35;")
