@@ -19,7 +19,7 @@ from query.parser_sql import (
 @dataclass
 class Select:
     catalog: CatalogManager
-    
+
     def execute(self, expr: exp.Select):
         db_name = get_table_catalog(expr)
         schema_name = get_table_schema(expr)
@@ -29,32 +29,61 @@ class Select:
         columns = table.get_tab_columns()
 
         plan = login_plan(expr)
-        column_name: str = get_identifier(plan.condition)
-        index = self.get_index(column_name, table)
+
+        try:
+            column_name: str = get_identifier(plan.condition)
+            index = self.get_index(column_name, table)
+        except Exception:
+            index = table.get_tab_indexes()[0]
+
         index_type = index.get_idx_type()
+
         if index_type == IndexType.BTREE.value:
             key: str = plan.condition.expression.to_py()
             record = self.call_btree(table, index.get_idx_file(), path_data, key)
             print(record)
+
         elif index_type == IndexType.HASH.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
-            record = self.call_hash(table, index.get_idx_file(), path_data ,column.get_att_len(), key)
+            record = self.call_hash(table, index.get_idx_file(), path_data, column.get_att_len(), key)
             print(record)
+
         elif index_type == IndexType.ISAM.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
             records = self.call_isam()
             print(records)
+
         elif index_type == IndexType.RTREE.value:
-            pass
+            heap_file = HeapFile(table, path_data)
+            try:
+                left = plan.condition.this
+                right = plan.condition.expression
+
+                lat_min = float(left.args["this"].args["this"].name)
+                lat_max = float(left.args["expression"].name)
+                long_min = float(right.args["this"].args["this"].name)
+                long_max = float(right.args["expression"].name)
+
+                from storage.indexing.rtree_wrapper import RTree
+                rtree = RTree(filename=index.get_idx_file())
+
+                results = rtree.range_query((lat_min, long_min, lat_max, long_max))
+                for pos in results:
+                    record, is_active = heap_file.read_record(pos)
+                    if is_active:
+                        print(record)
+
+            except Exception as e:
+                print("Error en la ejecución con RTree:", e)
 
     def get_index(self, column_name: str, table: Table):
         pos = 0
         for i, column in enumerate(table.get_tab_columns()):
             if column.get_att_name() == column_name:
-               pos = i
-               break
+                pos = i
+                break
         indexes = table.get_tab_indexes()
         if (pos + 1) > len(indexes):
             return indexes[0]
@@ -65,17 +94,4 @@ class Select:
         heap_file = HeapFile(table, data_file)
         pos = hash_file.search(key)
         if pos is None:
-            return None
-        record = heap_file.read_record(pos)
-        return record
-    
-    def call_btree(self, table, index_file, data_file, key: str):
-        btree_file = BTreeFile(index_filename=index_file)
-        heap_file = HeapFile(table, data_file)
-        pos = btree_file.search(key)
-        if pos is None:
-            return None
-        record = heap_file.read_record(pos)
-        return record
 
-    def call_isam(): pass

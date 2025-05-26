@@ -14,6 +14,7 @@ from storage.disk.file_manager import FileManager
 from models.enum.index_enum import IndexType
 
 from storage.indexing.btree import BTreeFile
+from storage.indexing.rtree_wrapper import RTree
 from storage.indexing.hashing import ExtendibleHashingFile
 
 VERSION = "0.0.1"
@@ -142,7 +143,12 @@ class CatalogManager:
         # update table metadata
         self.file_manager.write_data(table, path_table_meta)
         # create new index file
-        self.file_manager.create_file(path_idx_name)
+        if index_type == IndexType.RTREE.value:
+            from storage.indexing.rtree_wrapper import RTree
+            RTree(filename=path_idx_name)  
+        else:
+            self.file_manager.create_file(path_idx_name)
+
 
     # pending
     def create_function(self, db_name: str, schema_name: str, table_name: str, function_name: str) -> None:
@@ -207,7 +213,7 @@ class CatalogManager:
             if id == IndexType.BTREE.value:
                 return BTreeFile(index_filename=index_filename)
             if id == IndexType.RTREE.value:
-                return ExtendibleHashingFile(index_filename, max_key_size=key_size)
+                return RTree(filename=index_filename)
 
         columns = table.get_tab_columns()
         for index in indexes:
