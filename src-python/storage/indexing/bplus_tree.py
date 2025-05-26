@@ -98,18 +98,18 @@ class TreeNode:
         return self.key_count > max_keys
 
 class BPlusTreeFile:
-    HEADER_SIZE = 24  # root_node_id, node_count, height, record_count, data_type, max_len_key
+    HEADER_SIZE = 24  # root_node_id, node_count, height, record_count, data_type, max_key_len
     NODE_HEADER_SIZE = 12
     
-    def __init__(self, index_filename: str, data_type: DataTypeTag, max_len_key: int = 0, order: int = 4) -> None:
+    def __init__(self, index_filename: str, data_type: DataTypeTag, max_key_len: int = 0, order: int = 4) -> None:
         self.index_filename = index_filename
         self.data_type = data_type
-        self.max_len_key = max_len_key
+        self.max_key_len = max_key_len
         self.order = order
         self.max_keys = order - 1
         self.min_keys = max(1, (order - 1) // 2)
         
-        self.key_size = DataSerializer.get_size(data_type, max_len_key)
+        self.key_size = DataSerializer.get_size(data_type, max_key_len)
         self.pointer_size = 4
         
         self.internal_node_size = (self.NODE_HEADER_SIZE + 
@@ -238,13 +238,13 @@ class BPlusTreeFile:
 
     def _initialize_index_file(self):
         with open(self.index_filename, 'wb') as f:
-            f.write(struct.pack('IIIIII', 0xFFFFFFFF, 0, 0, 0, self.data_type.value, self.max_len_key))
+            f.write(struct.pack('IIIIII', 0xFFFFFFFF, 0, 0, 0, self.data_type.value, self.max_key_len))
             self.root_node_id = -1
     
     def _load_header(self):
         with open(self.index_filename, 'rb') as f:
             header_data = f.read(self.HEADER_SIZE)
-            root_id, self.node_count, self.height, self.record_count, data_type_value, self.max_len_key = struct.unpack('IIIIII', header_data)
+            root_id, self.node_count, self.height, self.record_count, data_type_value, self.max_key_len = struct.unpack('IIIIII', header_data)
             self.root_node_id = root_id if root_id != 0xFFFFFFFF else -1
             self.data_type = DataTypeTag(data_type_value)
     
@@ -252,7 +252,7 @@ class BPlusTreeFile:
         with open(self.index_filename, 'r+b') as f:
             f.seek(0)
             root_id = self.root_node_id if self.root_node_id != -1 else 0xFFFFFFFF
-            f.write(struct.pack('IIIIII', root_id, self.node_count, self.height, self.record_count, self.data_type.value, self.max_len_key))
+            f.write(struct.pack('IIIIII', root_id, self.node_count, self.height, self.record_count, self.data_type.value, self.max_key_len))
     
     def _create_root_leaf(self, key: Any, data_position: int):
         node = TreeNode(True)
@@ -402,7 +402,7 @@ class BPlusTreeFile:
                 if len(key_data) < self.key_size:
                     raise ValueError(f"Could not read the key {i} of the node {node_id}")
                 if i < key_count:
-                    key = DataSerializer.deserialize(key_data, self.data_type, self.max_len_key)
+                    key = DataSerializer.deserialize(key_data, self.data_type, self.max_key_len)
                     node.keys.append(key)
             
             if node.is_leaf:
@@ -446,7 +446,7 @@ class BPlusTreeFile:
             
             for i in range(self.max_keys):
                 if i < len(node.keys):
-                    key_bytes = DataSerializer.serialize(node.keys[i], self.data_type, self.max_len_key)
+                    key_bytes = DataSerializer.serialize(node.keys[i], self.data_type, self.max_key_len)
                 else:
                     key_bytes = b'\0' * self.key_size
                 f.write(key_bytes)

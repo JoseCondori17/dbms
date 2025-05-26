@@ -97,7 +97,7 @@ class Select:
             data_type=data_type
         )
         heap_file = HeapFile(table, data_file)
-        hash_file.debug_print_structure()
+        print(hash_file.get_all_records())
         pos = hash_file.search(key)
         if pos is None:
             return None

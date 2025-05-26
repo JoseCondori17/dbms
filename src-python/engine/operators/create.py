@@ -98,11 +98,11 @@ class Create:
                     block_factor = 10                    
                     column: Column = table.get_tab_columns()[index_column]
                     data_type = column.get_att_to_type_id()
-                    max_len_key = column.get_att_len()
+                    max_key_len = column.get_att_len()
                     isam_file = ISAMFile(
                         index_filename=path_index, 
                         data_type=data_type,
-                        max_len_key=max_len_key,
+                        max_key_len=max_key_len,
                     )
 
                     record_id = 0
@@ -124,11 +124,11 @@ class Create:
                 elif IndexType[index_type] == IndexType.BTREE:
                     column: Column = table.get_tab_columns()[index_column]
                     data_type = column.get_att_to_type_id()
-                    max_len_key = column.get_att_len()
+                    max_key_len = column.get_att_len()
                     btree_file = BPlusTreeFile(
                         index_filename=path_index,
                         max_key_size=data_type,
-                        max_len_key=max_len_key,
+                        max_key_len=max_key_len,
                         order=4
                     )                    
                     record_id = 0
@@ -145,11 +145,11 @@ class Create:
                 elif IndexType[index_type] == IndexType.HASH:
                     column: Column = table.get_tab_columns()[index_column]
                     data_type = column.get_att_to_type_id()
-                    max_len_key = column.get_att_len()
+                    max_key_len = column.get_att_len()
                     hash_file = ExtendibleHashingFile(
                         index_filename=path_index, 
                         data_type=data_type,
-                        max_len_key=max_len_key
+                        max_key_len=max_key_len
                     )
 
                     record_id = 0

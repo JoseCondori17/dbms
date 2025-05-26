@@ -5,17 +5,17 @@ from models.enum.data_type_enum import DataTypeTag
 from storage.disk.data_serializer import DataSerializer
 
 class ISAMFile:
-    HEADER_SIZE = 28  # levels, block_factor, data_type, max_len_key, total_blocks, root_blocks
+    HEADER_SIZE = 28  # levels, block_factor, data_type, max_key_len, total_blocks, root_blocks
     BLOCK_HEADER_SIZE = 12  # level, record_count, next_overflow
     
-    def __init__(self, index_filename: str, data_type: DataTypeTag, max_len_key: int = 0, levels: int = 2, block_factor: int = 10):
+    def __init__(self, index_filename: str, data_type: DataTypeTag, max_key_len: int = 0, levels: int = 2, block_factor: int = 10):
         self.index_filename = index_filename
         self.data_type = data_type
-        self.max_len_key = max_len_key
+        self.max_key_len = max_key_len
         self.levels = levels
         self.block_factor = block_factor
         
-        self.key_size = DataSerializer.get_size(data_type, max_len_key)
+        self.key_size = DataSerializer.get_size(data_type, max_key_len)
         self.key_record_size = self.key_size + 4  # for leaf 
         self.index_record_size = self.key_size + 4  # for index levels
         self.record_size = max(self.key_record_size, self.index_record_size)
@@ -293,7 +293,7 @@ class ISAMFile:
         if key is None:
             key_bytes = b'\0' * self.key_size
         else:
-            key_bytes = DataSerializer.serialize(key, self.data_type, self.max_len_key)
+            key_bytes = DataSerializer.serialize(key, self.data_type, self.max_key_len)
         return key_bytes + struct.pack('I', block_pointer)
     
     def _unpack_index_record(self, record_bytes: bytes) -> tuple[any, int]:
@@ -303,14 +303,14 @@ class ISAMFile:
         if all(b == 0 for b in key_bytes):
             return None, block_pointer
             
-        key = DataSerializer.deserialize(key_bytes, self.data_type, self.max_len_key)
+        key = DataSerializer.deserialize(key_bytes, self.data_type, self.max_key_len)
         return key, block_pointer
     
     def _pack_data_record(self, key: any, data_offset: int) -> bytes:
         if key is None:
             key_bytes = b'\0' * self.key_size
         else:
-            key_bytes = DataSerializer.serialize(key, self.data_type, self.max_len_key)
+            key_bytes = DataSerializer.serialize(key, self.data_type, self.max_key_len)
         return key_bytes + struct.pack('I', data_offset)
     
     def _unpack_data_record(self, record_bytes: bytes) -> tuple[any, int]:
@@ -320,24 +320,24 @@ class ISAMFile:
         if all(b == 0 for b in key_bytes):
             return None, data_offset
             
-        key = DataSerializer.deserialize(key_bytes, self.data_type, self.max_len_key)
+        key = DataSerializer.deserialize(key_bytes, self.data_type, self.max_key_len)
         return key, data_offset
     
     def _write_header(self, f):
         f.write(struct.pack('IIIIIII', self.levels, self.block_factor, self.data_type.value, 
-                          self.max_len_key, self.total_blocks, self.root_blocks, 0))
+                          self.max_key_len, self.total_blocks, self.root_blocks, 0))
     
     def _load_header(self):
         with open(self.index_filename, 'rb') as f:
             header_data = f.read(self.HEADER_SIZE)
-            self.levels, self.block_factor, data_type_value, self.max_len_key, self.total_blocks, self.root_blocks, _ = struct.unpack('IIIIIII', header_data)
+            self.levels, self.block_factor, data_type_value, self.max_key_len, self.total_blocks, self.root_blocks, _ = struct.unpack('IIIIIII', header_data)
             self.data_type = DataTypeTag(data_type_value)
     
     def _save_header(self):
         with open(self.index_filename, 'r+b') as f:
             f.seek(0)
             f.write(struct.pack('IIIIIII', self.levels, self.block_factor, self.data_type.value,
-                              self.max_len_key, self.total_blocks, self.root_blocks, 0))
+                              self.max_key_len, self.total_blocks, self.root_blocks, 0))
     
     def _get_block_position(self, block_id: int) -> int:
         return self.HEADER_SIZE + (block_id * self.block_size)

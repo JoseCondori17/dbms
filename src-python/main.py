@@ -1,10 +1,9 @@
 from engine.executor import PKAdmin
-from query.parser_sql import parser_sql, get_values
 
 
 create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
-select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Eva Liu';"
-select_q_btr = "SELECT name FROM ecm.store.employees WHERE id = 34;"
+select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Cameron Richardson';"
+select_q_btr = "SELECT name FROM ecm.store.employees WHERE id = 15;"
 database_q = "CREATE DATABASE ecm"
 schema_q = "CREATE SCHEMA ecm.store"
 set_q = "SET search_path TO ecm.store"
@@ -90,7 +89,6 @@ query = """
     (60, 'Hazel Peterson', 420.50);
 """
 
-
 rtree_query = """
 CREATE DATABASE geo;
 CREATE SCHEMA geo.public;
@@ -117,7 +115,7 @@ WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
 
 
 admin = PKAdmin()
-admin.execute(select_q)
+admin.execute(index_q)
 
 
 
