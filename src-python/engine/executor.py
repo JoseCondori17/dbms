@@ -25,19 +25,19 @@ class PKAdmin:
                 pass
             elif isinstance(expr, exp.Create):
                 create = Create(self.catalog)
-                return create.execute(expr)
+                result = create.execute(expr)
             elif isinstance(expr, exp.Insert):
                 insert = Insert(self.catalog)
-                return insert.execute(expr)
+                result = insert.execute(expr)
             elif isinstance(expr, exp.Select):
                 select = Select(self.catalog)
-                return select.execute(expr)
+                result = select.execute(expr)
             elif isinstance(expr, exp.Copy):
                 copy = Copy(self.catalog)
-                return copy.execute(expr)
+                result = copy.execute(expr)
             elif isinstance(expr, exp.Delete):
                 select = Delete(self.catalog)
-                return select.execute(expr)
+                result = select.execute(expr)
             elif isinstance(expr, exp.Update):
                 pass
             else:

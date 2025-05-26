@@ -47,6 +47,60 @@ interface Table {
   tab_indexes: TableIndex[];
 }
 
+function TableColumnsAccordion({ columns }: { columns: TableColumn[] }) {
+  return (
+    <ul className="pl-4 flex flex-col gap-y-1">
+      {columns.map((col) => (
+        <li key={col.att_name} className="flex justify-between text-xs uppercase">
+          <span>{col.att_name}</span>
+          <span className="text-muted-foreground ml-2">{col.att_len}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TableIndexesAccordion({ indexes }: { indexes: TableIndex[] }) {
+  return (
+    <ul className="pl-4 flex flex-col gap-y-1">
+      {indexes.map((idx) => (
+        <li key={idx.idx_id} className="flex justify-between text-xs">
+          <span className="truncate max-w-[120px]">{idx.idx_name}</span>
+          <span className="text-muted-foreground ml-2">{idx.idx_type}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TablesAndIndexes({ tables }: { tables: Table[] }) {
+  return (
+    <Accordion type="multiple" className="w-full">
+      <AccordionItem value="tables" className="border-b-0">
+        <AccordionTrigger className="text-sm font-semibold">Tablas</AccordionTrigger>
+        <AccordionContent>
+          <Accordion type="multiple" className="w-full">
+            {tables.map((table) => (
+              <AccordionItem value={table.tab_name} key={table.tab_id} className="border-b-0">
+                <AccordionTrigger className="text-xs uppercase font-medium">{table.tab_name}</AccordionTrigger>
+                <AccordionContent>
+                  <TableColumnsAccordion columns={table.tab_columns} />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </AccordionContent>
+      </AccordionItem>
+      <AccordionItem value="indexes" className="border-b-0">
+        <AccordionTrigger className="text-sm font-semibold">Índices</AccordionTrigger>
+        <AccordionContent>
+          <TableIndexesAccordion indexes={tables.flatMap((t) => t.tab_indexes)} />
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  );
+}
+
 function TablesList({ dbName, schemaName }: { dbName: string; schemaName: string }) {
   const [tables, setTables] = React.useState<Table[]>([]);
   const [loading, setLoading] = React.useState(false);
@@ -76,19 +130,15 @@ function TablesList({ dbName, schemaName }: { dbName: string; schemaName: string
   if (!schemaName || selectedSchema !== schemaName) return null;
 
   return (
-    <ul className="border-muted flex flex-col gap-y-1 mt-2">
+    <div className="mt-2">
       {loading ? (
-        <li className="pl-4 ml-1 text-xs text-muted-foreground">Cargando tablas...</li>
+        <div className="pl-4 ml-1 text-xs text-muted-foreground">Cargando tablas...</div>
       ) : tables.length === 0 ? (
-        <li className="pl-4 ml-1 text-xs text-muted-foreground">No hay tablas</li>
+        <div className="pl-4 ml-1 text-xs text-muted-foreground">No hay tablas</div>
       ) : (
-        tables.map((table) => (
-          <li key={table.tab_id} className={buttonVariants({variant: "ghost", size: "sm", className: "relative justify-start"})}>
-            <span className="pl-4 ml-1">{table.tab_name}</span>
-          </li>
-        ))
+        <TablesAndIndexes tables={tables} />
       )}
-    </ul>
+    </div>
   );
 }
 

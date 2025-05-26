@@ -172,29 +172,34 @@ class BPlusTreeFile:
         self._save_header()
         return True
     
-    def delete(self, key: str) -> bool:
+    def delete(self, key: str) -> Optional[int]:
         if self.root_node_id == -1:
-            return False
+            return None
         
         leaf_node_id = self._find_leaf(key)
         leaf_node = self._read_node(leaf_node_id)
         
+        # Buscar la clave en el nodo hoja
         for i, existing_key in enumerate(leaf_node.keys):
             if existing_key == key:
                 if leaf_node.is_leaf:
+                    deleted_record_position = leaf_node.data_positions[i]
+                    
                     leaf_node.keys.pop(i)
                     leaf_node.data_positions.pop(i)
                     leaf_node.key_count -= 1
+                    
                     self._write_node(leaf_node_id, leaf_node)
+                    
                     self.record_count -= 1
                     self._save_header()
                     
                     if leaf_node.is_underflow(self.min_keys):
                         self._handle_underflow(leaf_node_id)
-                
-                return True
+                    
+                    return deleted_record_position
         
-        return False
+        return None
     
     def search(self, key: str) -> Optional[int]:
         if self.root_node_id == -1:
@@ -430,27 +435,3 @@ class BPlusTreeFile:
                 pass
             return True
         return os.path.getsize(self.index_filename) == 0
-    def delete(self, key: str) -> Optional[int]:
-            if self.root_node_id == -1:
-                return None
-            
-            leaf_node_id = self._find_leaf(key)
-            leaf_node = self._read_node(leaf_node_id)
-            
-            for i, existing_key in enumerate(leaf_node.keys):
-                if existing_key == key:
-                    if leaf_node.is_leaf:
-                        data_position = leaf_node.data_positions[i]
-                        leaf_node.keys.pop(i)
-                        leaf_node.data_positions.pop(i)
-                        leaf_node.key_count -= 1
-                        self._write_node(leaf_node_id, leaf_node)
-                        self.record_count -= 1
-                        self._save_header()
-                        
-                        if leaf_node.is_underflow(self.min_keys):
-                            self._handle_underflow(leaf_node_id)
-                        
-                        return data_position
-            
-            return None

@@ -24,7 +24,7 @@ class Insert:
         with HeapFile(table, table_path) as heap:
             position = heap.insert(values)
             for index, pos_column in indexes.values():
-                index.insert(str(values[pos_column]), position)
+                index.insert(values[pos_column], position)
 
     def execute(self, expr: exp.Insert) -> None:
         db_name = get_table_catalog(expr)
@@ -54,4 +54,4 @@ class Insert:
                 position = heap.insert(value)
                 # update all indexes
                 for index, pos_column in indexes.values():
-                    index.insert(str(value[pos_column]), position) # here
+                    index.insert(value[pos_column], position) # here
