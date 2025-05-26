@@ -98,7 +98,7 @@ class Select:
         return record
     
     def call_btree(self, table, index_file, data_file, key: str):
-        btree_file = BTreeFile(index_filename=index_file)
+        btree_file = BPlusTreeFile(index_filename=index_file)
         heap_file = HeapFile(table, data_file)
         pos = btree_file.search(key)
         if pos is None:

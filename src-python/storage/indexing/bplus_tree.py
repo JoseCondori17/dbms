@@ -130,7 +130,8 @@ class BPlusTreeFile:
         else:
             self._load_header()
     
-    def insert(self, key: str, data_position: int) -> bool:
+    def insert(self, key: Union[str,int], data_position: int) -> bool:
+        key = str(key)
         if self.root_node_id == -1:
             self._create_root_leaf(key, data_position)
             return True
@@ -196,7 +197,8 @@ class BPlusTreeFile:
         
         return False
     
-    def search(self, key: str) -> Optional[int]:
+    def search(self, key: Union[str,int]) -> Optional[int]:
+        key = str(key)
         if self.root_node_id == -1:
             return None
         
@@ -211,7 +213,6 @@ class BPlusTreeFile:
         return None
     
     def _initialize_index_file(self):
-        """Initialize an empty B+ tree file"""
         with open(self.index_filename, 'wb') as f:
             f.write(struct.pack('IIII', 0xFFFFFFFF, 0, 0, 0))
             self.root_node_id = -1
