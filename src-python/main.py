@@ -37,6 +37,7 @@ query = """
     --CREATE INDEX idx_name ON ecm.store.employees USING btree(name);
     --CREATE INDEX idx_name ON ecm.store.employees USING isam(name);
     --CREATE INDEX idx_name ON ecm.store.employees USING rtree(name);
+    --CREATE INDEX idx_name ON ecm.store.employees USING avl(name);
 
     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
     (1, 'John Doe', 500.00), 
@@ -100,9 +101,10 @@ query = """
     (59, 'George Torres', 480.90),
     (60, 'Hazel Peterson', 420.50);
 """
+q_avl = "CREATE INDEX idx_name ON ecm.store.employees USING avl(name);"
 # se debe manejar los errores si es que ya existen
 admin = PKAdmin()
-admin.execute(select_q_btr)
+admin.execute(q_avl)
 #table = admin.catalog.get_table("ecm", "store", "employees")
 #print(table)
 

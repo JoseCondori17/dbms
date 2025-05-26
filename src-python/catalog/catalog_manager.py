@@ -160,12 +160,12 @@ class CatalogManager:
         return list(self.global_catalog.databases.keys())
 
     def get_databases_json(self) -> str:
-        result = {}
+        result = []
         for db_name, db in self.global_catalog.databases.items():
             db_dict = asdict(db)
             if isinstance(db_dict.get("db_created_at"), datetime):
                 db_dict["db_created_at"] = db_dict["db_created_at"].isoformat()
-            result[db_name] = db_dict
+            result.append(db_dict)
         return result
 
     def get_schemas_dict(self, db_name: str) -> dict[str, int]:
@@ -186,10 +186,10 @@ class CatalogManager:
     
     def get_schemas_json(self, db_name: str) -> str:
         schemas = self.get_schemas(db_name)
-        result = {}
+        result = []
         for schema in schemas:
             schema_dict = asdict(schema)
-            result[schema_dict["sch_name"]] = schema_dict
+            result.append(schema_dict)
         return result
 
     def get_schemas_name(self, db_name: str) -> list[str]:
@@ -213,10 +213,10 @@ class CatalogManager:
     
     def get_tables_json(self, db_name: str, schema_name: str):
         tables = self.get_tables(db_name, schema_name)
-        result = {}
+        result = []
         for table in tables:
             table_dict = asdict(table)
-            result[table_dict["tab_name"]] = table_dict
+            result.append(table_dict)
         return result
 
     def get_tables_name(self, db_name: str, schema_name: str) -> list[str]:
