@@ -12,7 +12,6 @@ from catalog.index import Index
 from storage.disk.path_builder import PathBuilder
 from storage.disk.file_manager import FileManager
 from models.enum.index_enum import IndexType
-from storage.indexing.btree import BTreeFile
 from storage.indexing.rtree_wrapper import RTree
 from storage.indexing.bplus_tree import BPlusTreeFile
 from storage.indexing.hashing import ExtendibleHashingFile

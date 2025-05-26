@@ -15,7 +15,6 @@ class Delete:
     catalog: CatalogManager
 
     def execute(self, expr: exp.Delete) -> str:
-        # 1. Extraer tabla y cláusula WHERE
         db_name     = get_table_catalog(expr)
         schema_name = get_table_schema(expr)
         table_name  = get_table_name(expr)
@@ -27,12 +26,10 @@ class Delete:
         col_name = get_identifier(cond)
         value    = cond.expression.to_py()
 
-        # 2. Preparar acceso a datos e índices
         table     = self.catalog.get_table(db_name, schema_name, table_name)
         data_path = self.catalog.path_builder.table_data(db_name, schema_name, table_name)
         callbacks = self.catalog.callbacks_index(db_name, schema_name, table_name)
 
-        # 3. Recorrer el heap y borrar coincidencias
         deleted = 0
         with HeapFile(table, data_path) as heap:
             rid = 0
@@ -41,12 +38,10 @@ class Delete:
                 if rec is None:
                     break
                 row, active = rec
-                # comparar por valor
                 col_pos = self.catalog.get_position_column_by_name(db_name, schema_name, table_name, col_name)
                 if active and row[col_pos] == value:
                     heap.delete(rid)
                     deleted += 1
-                    # actualizar todos los índices
                     for idx_obj, pos in callbacks.values():
                         idx_obj.delete(str(row[pos]))
                 rid += 1

@@ -97,13 +97,17 @@ class Select:
         record = heap_file.read_record(pos)
         return record
     
-    def call_btree(self, table, index_file, data_file, key: str):
-        btree_file = BPlusTreeFile(index_filename=index_file)
-        heap_file = HeapFile(table, data_file)
-        pos = btree_file.search(key)
-        if pos is None:
-            return None
-        record = heap_file.read_record(pos)
-        return record
+    def call_btree(self, table: Table, index_obj, data_file: str, key: str):
+        col_pos    = index_obj.get_idx_columns()[0]
+        column     = table.get_tab_columns()[col_pos]
+        idx_path   = index_obj.get_idx_file()
+        btree = BPlusTreeFile(
+            index_filename=str(idx_path),
+            max_key_size=column.get_att_len(),
+            order=4
+        )
+        heap = HeapFile(table, data_file)
+        pos  = btree.search(key)
+        return None if pos is None else heap.read_record(pos)
 
     def call_isam(): pass

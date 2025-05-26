@@ -130,8 +130,7 @@ class BPlusTreeFile:
         else:
             self._load_header()
     
-    def insert(self, key: Union[str,int], data_position: int) -> bool:
-        key = str(key)
+    def insert(self, key: str, data_position: int) -> bool:
         if self.root_node_id == -1:
             self._create_root_leaf(key, data_position)
             return True
@@ -197,8 +196,7 @@ class BPlusTreeFile:
         
         return False
     
-    def search(self, key: Union[str,int]) -> Optional[int]:
-        key = str(key)
+    def search(self, key: str) -> Optional[int]:
         if self.root_node_id == -1:
             return None
         
