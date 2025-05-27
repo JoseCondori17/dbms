@@ -31,6 +31,12 @@ class Delete:
         callbacks = self.catalog.callbacks_index(db_name, schema_name, table_name)
 
         deleted = 0
+        col_pos = self.catalog.get_position_column_by_name(
+            db_name, schema_name, table_name, col_name
+        )
+        if col_pos is None:
+            raise ValueError(f"Columna '{col_name}' no encontrada en la tabla")
+
         with HeapFile(table, data_path) as heap:
             rid = 0
             while True:
@@ -38,12 +44,14 @@ class Delete:
                 if rec is None:
                     break
                 row, active = rec
-                col_pos = self.catalog.get_position_column_by_name(db_name, schema_name, table_name, col_name)
                 if active and row[col_pos] == value:
                     heap.delete(rid)
                     deleted += 1
                     for idx_obj, pos in callbacks.values():
-                        idx_obj.delete(str(row[pos]))
+                        try:
+                            idx_obj.delete(row[pos])
+                        except Exception:
+                            pass
                 rid += 1
 
         return f"{deleted} rows deleted"

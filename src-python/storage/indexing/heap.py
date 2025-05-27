@@ -23,13 +23,18 @@ class HeapFile:
         return (offset // self.fixed_length.get_format_size()) - 1
 
     def delete(self, record_id: int):
-        record = self.read_record(record_id)
-        data_tuple, _ = record
+        rec = self.read_record(record_id)
+        if rec is None:
+            return
+
+        data_tuple, _ = rec
         packed_data = self.fixed_length.packing(data_tuple, is_active=False)
-        file_position = record_id * self.fixed_length.get_format_size()
-        self._file.seek(file_position)
-        self._file.write(packed_data)
-        self._file.flush()
+
+        size = self.fixed_length.get_format_size()
+        with open(self.file_path, "r+b") as f:
+            f.seek(record_id * size)
+            f.write(packed_data)
+            f.flush()
 
     def get_column_value(self, record_id: int, column_name: str) -> any:
         record = self.read_record(record_id)

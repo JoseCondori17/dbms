@@ -28,8 +28,8 @@ class GlobalCatalog:
 class CatalogManager:
     def __init__(self, data_directory: Path):
         self.system_catalog_path = data_directory / "system/catalog.dat"
-        self.file_manager = FileManager(data_directory)
-        self.path_builder = PathBuilder(data_directory)
+        self.file_manager        = FileManager(data_directory)
+        self.path_builder        = PathBuilder(data_directory)
         
         if not data_directory.exists():
             os.makedirs(data_directory, exist_ok=True)
@@ -60,7 +60,7 @@ class CatalogManager:
 
     # /////////////////////////////////////////////////////////////////////////////////////////
     def create_database(self, db_name: str) -> None:
-        path_db = self.path_builder.database_dir(db_name)
+        path_db      = self.path_builder.database_dir(db_name)
         path_db_meta = self.path_builder.database_meta(db_name)
         self.file_manager.create_directory(path_db)
         self.file_manager.create_file(path_db_meta)
@@ -70,25 +70,28 @@ class CatalogManager:
         self.save_catalog()
 
     def create_schema(self, db_name: str, schema_name: str) -> None:
-        path_sh = self.path_builder.schema_dir(db_name, schema_name)
+        path_sh      = self.path_builder.schema_dir(db_name, schema_name)
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         if not self.file_manager.path_exists(path_sh):
             self.file_manager.create_directory(path_sh)
         self.file_manager.create_file(path_sh_meta)
         schema_id = self.generate_schema_id(db_name)
-        database = self.global_catalog.databases[db_name]
+        database  = self.global_catalog.databases[db_name]
         database.add_schema(schema_name, schema_id)
-        # Update database metadata
         path_db_meta = self.path_builder.database_meta(db_name)
         self.file_manager.write_data(database, path_db_meta)
-        # Write schema metadata
         schema = Schema(schema_id, schema_name, database.get_id())
         self.file_manager.write_data(schema, path_sh_meta)
-        # Save database catalog data
         self.save_catalog()
 
-    def create_table(self, db_name: str, schema_name: str, table_name: str, columns: list[Column], indexes: list[Index]) -> None:
-        path_table = self.path_builder.table_dir(db_name, schema_name, table_name)
+    def create_table(self,
+                     db_name: str,
+                     schema_name: str,
+                     table_name: str,
+                     columns:    list[Column],
+                     indexes:    list[Index]
+                     ) -> None:
+        path_table      = self.path_builder.table_dir(db_name, schema_name, table_name)
         path_table_data = self.path_builder.table_data(db_name, schema_name, table_name)
         path_table_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
 
@@ -97,68 +100,58 @@ class CatalogManager:
         self.file_manager.create_file(path_table_data)
         self.file_manager.create_file(path_table_meta)
 
-        # update schema metadata
-        table_id = self.generate_table_id(db_name, schema_name)
+        table_id     = self.generate_table_id(db_name, schema_name)
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         schema_meta: Schema = self.file_manager.read_data(path_sh_meta)
         schema_meta.add_table(table_name, table_id)
         self.file_manager.write_data(schema_meta, path_sh_meta)
-        # write table header metadata
         table = Table(
-            tab_id=table_id,
-            tab_name=table_name,
-            tab_namespace=schema_meta.get_id(),
-            tab_tuples=0,
-            tab_pages=1, 
-            tab_page_size=8192,
-            tab_columns=columns,
-            tab_indexes=indexes
+            tab_id       = table_id,
+            tab_name     = table_name,
+            tab_namespace= schema_meta.get_id(),
+            tab_tuples   = 0,
+            tab_pages    = 1,
+            tab_page_size= 8192,
+            tab_columns  = columns,
+            tab_indexes  = indexes
         )
         self.file_manager.write_data(table, path_table_meta)
 
-    def create_index(self, 
-                     db_name: str, 
-                     schema_name: str, 
-                     table_name: str, 
-                     index_name: str, 
-                     index_type: int, 
-                     index_colum: int = 0,
+    def create_index(self,
+                     db_name:       str,
+                     schema_name:   str,
+                     table_name:    str,
+                     index_name:    str,
+                     index_type:    int,
+                     index_colum:   int = 0,
                      index_is_primary: bool = False
                      ) -> None:
-        path_table_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
-        path_idx_name = self.path_builder.table_index(db_name, schema_name, table_name, index_name)
-        table: Table = self.file_manager.read_data(path_table_meta)
+        path_meta   = self.path_builder.table_meta(db_name, schema_name, table_name)
+        path_idx    = self.path_builder.table_index(db_name, schema_name, table_name, index_name)
+        table: Table = self.file_manager.read_data(path_meta)
         
-        table_id = self.generate_index_id(db_name, schema_name, table_name)
+        idx_id = self.generate_index_id(db_name, schema_name, table_name)
         index = Index(
-            idx_id=table_id,
-            idx_type=index_type,
-            idx_name=index_name,
-            idx_file=path_idx_name,
-            idx_tuples=0,
-            idx_columns=[index_colum,],
-            idx_is_primary=index_is_primary
+            idx_id       = idx_id,
+            idx_type     = index_type,
+            idx_name     = index_name,
+            idx_file     = path_idx,
+            idx_tuples   = 0,
+            idx_columns  = [index_colum],
+            idx_is_primary = index_is_primary
         )
         table.add_index(index)
-        # update table metadata
-        self.file_manager.write_data(table, path_table_meta)
-        # create new index file
+        self.file_manager.write_data(table, path_meta)
+
         if index_type == IndexType.RTREE.value:
-            from storage.indexing.rtree_wrapper import RTree
-            RTree(filename=path_idx_name)  
+            RTree(filename=path_idx)
         else:
-            self.file_manager.create_file(path_idx_name)
+            self.file_manager.create_file(path_idx)
 
-
-    # pending
-    def create_function(self, db_name: str, schema_name: str, table_name: str, function_name: str) -> None:
-        path_fn_name = self.path_builder.table_index(db_name, schema_name, table_name, function_name)
-        self.file_manager.create_file(path_fn_name)
-
-    # /////////////////////////////////////////////////////////////////////////////////////////
+    # /////////////////////////////////////////////////////////////////////////////////////////    
     def get_version(self) -> str:
         return self.global_catalog.version
-    
+
     def get_created_at(self) -> datetime:
         return self.global_catalog.created_at
 
@@ -175,112 +168,118 @@ class CatalogManager:
         return result
 
     def get_schemas_dict(self, db_name: str) -> dict[str, int]:
-        database = self.global_catalog.databases[db_name]
-        return database.get_schemas()
-    
+        return self.global_catalog.databases[db_name].get_schemas()
+
     def get_schema(self, db_name: str, schema_name: str) -> Schema | None:
         path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
         return self.file_manager.read_data(path_sh_meta)
-    
+
     def get_schemas(self, db_name: str) -> list[Schema]:
         schemas = []
-        for schema_name in self.get_schemas_dict(db_name).keys():
-            path_sh_meta = self.path_builder.schema_meta(db_name, schema_name)
-            schema: Schema = self.file_manager.read_data(path_sh_meta)
-            schemas.append(schema)
+        for name in self.get_schemas_dict(db_name):
+            path_sh_meta = self.path_builder.schema_meta(db_name, name)
+            schemas.append(self.file_manager.read_data(path_sh_meta))
         return schemas
-    
+
     def get_schemas_json(self, db_name: str) -> str:
-        schemas = self.get_schemas(db_name)
-        result = []
-        for schema in schemas:
-            schema_dict = asdict(schema)
-            result.append(schema_dict)
-        return result
+        return [asdict(s) for s in self.get_schemas(db_name)]
 
     def get_schemas_name(self, db_name: str) -> list[str]:
-        schemas = self.get_schemas(db_name)
-        return [schema.get_name() for schema in schemas]
+        return [s.get_name() for s in self.get_schemas(db_name)]
 
-    def get_table(self, db_name: str, schema_name: str, table_name: str) -> Table | None:
+    def get_table(self, db_name: str, schema_name: str, table_name: str) -> Table:
         path_tab_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
-        table: Table = self.file_manager.read_data(path_tab_meta)
-        return table
+        return self.file_manager.read_data(path_tab_meta)
 
     def get_tables(self, db_name: str, schema_name: str) -> list[Table]:
-        schema = self.path_builder.schema_meta(db_name, schema_name)
-        schema_meta: Schema = self.file_manager.read_data(schema)
+        schema_meta: Schema = self.file_manager.read_data(
+            self.path_builder.schema_meta(db_name, schema_name)
+        )
         tables = []
-        for table_name in schema_meta.get_tables().keys():
-            path_tab_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
-            table: Table = self.file_manager.read_data(path_tab_meta)
-            tables.append(table)
+        for name in schema_meta.get_tables():
+            path_tab_meta = self.path_builder.table_meta(db_name, schema_name, name)
+            tables.append(self.file_manager.read_data(path_tab_meta))
         return tables
-    
+
     def get_tables_json(self, db_name: str, schema_name: str):
-        tables = self.get_tables(db_name, schema_name)
-        result = []
-        for table in tables:
-            table_dict = asdict(table)
-            result.append(table_dict)
-        return result
+        return [asdict(t) for t in self.get_tables(db_name, schema_name)]
 
     def get_tables_name(self, db_name: str, schema_name: str) -> list[str]:
-        tables = self.get_tables(db_name, schema_name)
-        return [table.get_tab_name() for table in tables]
+        return [t.get_tab_name() for t in self.get_tables(db_name, schema_name)]
 
-    def get_position_column_by_name(self, db_name: str, schema_name: str, table_name: str, column_name: str) -> int | None:
-        table: Table = self.get_table(db_name, schema_name, table_name)
-        for i, column in enumerate(table.get_tab_columns()):
-            if column.get_att_name() == column_name:
+    def get_position_column_by_name(self,
+                                    db_name: str,
+                                    schema_name: str,
+                                    table_name: str,
+                                    column_name: str
+                                    ) -> int | None:
+        table = self.get_table(db_name, schema_name, table_name)
+        for i, col in enumerate(table.get_tab_columns()):
+            if col.get_att_name() == column_name:
                 return i
         return None
-        
-    def callbacks_index(self, db_name: str, schema_name: str, table_name: str) -> dict:
-        table = self.get_table(db_name, schema_name, table_name)
-        indexes = table.get_tab_indexes()
-        callback_cls = {}
 
-        def get_index_by_id(id: int, index_filename: str, data_type: DataTypeTag):
-            if id == IndexType.SEQUENTIAL.value:
-                return ExtendibleHashingFile(index_filename, data_type=data_type)
-            if id == IndexType.AVL.value:
-                return ExtendibleHashingFile(index_filename, data_type=data_type)
-            if id == IndexType.ISAM.value:
-                return ISAMFile(index_filename, data_type=data_type)
-            if id == IndexType.HASH.value:
-                return ExtendibleHashingFile(index_filename, data_type=data_type)
-            if id == IndexType.BTREE.value:
-                return BPlusTreeFile(index_filename=index_filename, data_type=data_type, order=4)
-            if id == IndexType.RTREE.value:
-                return RTree(filename=index_filename)
-
+    def callbacks_index(self,
+                        db_name:     str,
+                        schema_name: str,
+                        table_name:  str
+                        ) -> dict:
+        table   = self.get_table(db_name, schema_name, table_name)
         columns = table.get_tab_columns()
-        for index in indexes:
-            column_pos = index.get_idx_columns()[0]
-            column = columns[column_pos]
-            callback_cls[index.get_idx_id()] = (
-                get_index_by_id(index.get_idx_type(), index.get_idx_file(), column.get_att_to_type_id()),
-                column_pos
-            )
-        return callback_cls
+        callbacks = {}
+
+        for index in table.get_tab_indexes():
+            col_pos  = index.get_idx_columns()[0]
+            column   = columns[col_pos]
+            dtype    = column.get_att_to_type_id()
+            max_len  = column.get_att_len()
+            idx_type = index.get_idx_type()
+            idx_file = str(index.get_idx_file())
+
+            if idx_type in (IndexType.SEQUENTIAL.value, IndexType.HASH.value):
+                idx_obj = ExtendibleHashingFile(
+                    index_filename=idx_file,
+                    data_type=dtype,
+                    max_key_len=max_len
+                )
+            elif idx_type == IndexType.ISAM.value:
+                idx_obj = ISAMFile(
+                    index_filename=idx_file,
+                    data_type=dtype,
+                    max_key_len=max_len
+                )
+            elif idx_type == IndexType.BTREE.value:
+                idx_obj = BPlusTreeFile(
+                    index_filename=idx_file,
+                    data_type=dtype,
+                    max_key_len=max_len,
+                    order=4
+                )
+            elif idx_type == IndexType.RTREE.value:
+                idx_obj = RTree(filename=idx_file)
+            else:
+                idx_obj = ExtendibleHashingFile(
+                    index_filename=idx_file,
+                    data_type=dtype,
+                    max_key_len=max_len
+                )
+
+            callbacks[index.get_idx_id()] = (idx_obj, col_pos)
+
+        return callbacks
 
     # /////////////////////////////////////////////////////////////////////////////////////////
     def generate_database_id(self) -> int:
         return max((db.get_id() for db in self.global_catalog.databases.values()), default=0) + 1
     def generate_schema_id(self, db_name: str) -> int:
-        database = self.global_catalog.databases[db_name]
-        return max((schema_id for schema_id in database.get_schemas().values()), default=0) + 1
+        return max(self.global_catalog.databases[db_name].get_schemas().values(), default=0) + 1
     def generate_table_id(self, db_name: str, schema_name: str) -> int:
-        path_schema = self.path_builder.schema_meta(db_name, schema_name)
-        schema_meta: Schema = self.file_manager.read_data(path_schema)
-        return max((table_id for table_id in schema_meta.get_tables().values()), default=0) + 1
-    def generate_function_id(self, db_name: str, schema_name: str) -> int:
-        """ path_schema = self.path_builder.function_file(db_name, schema_name)
-        schema_meta: Schema = self.file_manager.read_data(path_schema)
-        return max((function_id for function_id in schema_meta.get_functions().values()), default=0) + 1 """
-        pass
+        schema_meta: Schema = self.file_manager.read_data(
+            self.path_builder.schema_meta(db_name, schema_name)
+        )
+        return max(schema_meta.get_tables().values(), default=0) + 1
     def generate_index_id(self, db_name: str, schema_name: str, table_name) -> int:
-        path_schema = self.path_builder.table_meta(db_name, schema_name, table_name)
-        table_meta: Table = self.file_manager.read_data(path_schema)
-        return max((index.get_idx_id() for index in table_meta.get_tab_indexes()), default=0) + 1
+        table_meta: Table = self.file_manager.read_data(
+            self.path_builder.table_meta(db_name, schema_name, table_name)
+        )
+        return max((i.get_idx_id() for i in table_meta.get_tab_indexes()), default=0) + 1
