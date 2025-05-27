@@ -30,7 +30,6 @@ class Select:
         columns = table.get_tab_columns()
 
         plan = login_plan(expr)
-
         try:
             column_name: str = get_identifier(plan.condition)
             index = self.get_index(column_name, table)
@@ -38,7 +37,17 @@ class Select:
             index = table.get_tab_indexes()[0]
 
         index_type = index.get_idx_type()
-
+        if plan.condition is None:
+            records = self.call_scan(table, index, path_data, columns[0].get_att_to_type_id())
+            print(records)
+            return
+        elif plan.condition.args['low'] and plan.condition.args['high']:
+            low = plan.condition.args['low'].to_py()
+            high = plan.condition.args['high'].to_py()
+            records = self.call_scan_range(table, index, path_data, columns[0].get_att_to_type_id(), low, high)
+            print(records)
+            return
+        
         if index_type == IndexType.BTREE.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
@@ -77,7 +86,7 @@ class Select:
 
             except Exception as e:
                 print("Error en la ejecución con RTree:", e)
-
+        
     def get_index(self, column_name: str, table: Table):
         pos = 0
         for i, column in enumerate(table.get_tab_columns()):
@@ -118,7 +127,40 @@ class Select:
             order=4
         )
         heap = HeapFile(table, data_file)
+        if not key:
+            print("Key is empty, returning None")
+            return None
         pos  = btree.search(key)
         return None if pos is None else heap.read_record(pos)
 
     def call_isam(): pass
+
+    def call_scan(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag):
+        idx_path   = index_obj.get_idx_file()
+        columns = table.get_tab_columns()
+        column = columns[index_obj.get_idx_columns()[0]]
+        btree = BPlusTreeFile(
+            index_filename=str(idx_path),
+            data_type=data_type,
+            max_key_len=column.get_att_len(),
+            order=4
+        )
+        heap = HeapFile(table, data_file)
+        records_id = [id for (_, id) in btree.all_tuples()]
+        for record in heap.read_all_records(records_id):
+            print(record)
+
+    def call_scan_range(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, start: any, end: any):
+        idx_path   = index_obj.get_idx_file()
+        columns = table.get_tab_columns()
+        column = columns[index_obj.get_idx_columns()[0]]
+        btree = BPlusTreeFile(
+            index_filename=str(idx_path),
+            data_type=data_type,
+            max_key_len=column.get_att_len(),
+            order=4
+        )
+        heap = HeapFile(table, data_file)
+        records_id = [id for (_, id) in btree.all_tuples_range(start, end)]
+        for record in heap.read_all_records(records_id):
+            print(record)

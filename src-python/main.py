@@ -115,7 +115,7 @@ WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
 
 
 admin = PKAdmin()
-admin.execute(select_q)
+admin.execute("SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;")
 
 # admin.execute(database_q)
 # admin.execute(schema_q)

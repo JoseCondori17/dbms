@@ -236,6 +236,36 @@ class BPlusTreeFile:
 
         return result
 
+    def all_tuples_range(self, start: any, end: any) -> List[Tuple[Any, int]]:
+        if self.root_node_id == -1:
+            return []
+
+        current_node_id = self.root_node_id
+        while True:
+            node = self._read_node(current_node_id)
+            if node.is_leaf:
+                break
+            child_index = 0
+            for i, key in enumerate(node.keys):
+                if start <= key:
+                    break
+                child_index = i + 1
+            current_node_id = node.pointers[child_index] if child_index < len(node.pointers) else -1
+            if current_node_id == -1:
+                return []
+
+        result = []
+        while current_node_id != -1:
+            node = self._read_node(current_node_id)
+            for key, data_pos in zip(node.keys, node.data_positions):
+                if key > end:
+                    return result
+                if start <= key <= end:
+                    result.append((key, data_pos))
+            current_node_id = node.next_leaf
+
+        return result
+
     def _initialize_index_file(self):
         with open(self.index_filename, 'wb') as f:
             f.write(struct.pack('IIIIII', 0xFFFFFFFF, 0, 0, 0, self.data_type.value, self.max_key_len))
