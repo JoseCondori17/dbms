@@ -23,7 +23,7 @@ query = """
     CREATE SCHEMA ecm.store;
     CREATE TABLE ecm.store.employees (
         id INT,
-        name VARCHAR(50), 
+        name VARCHAR(100), 
         salary DOUBLE
     );
     INSERT INTO ecm.store.employees (id, name, salary) VALUES 
@@ -111,6 +111,27 @@ CREATE INDEX idx_ubicacion ON geo.public.ciudades USING rtree(latitude);
 
 SELECT name FROM geo.public.ciudades 
 WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
+"""
+
+inventory = """
+CREATE TABLE products (
+    product_id VARCHAR(20),
+    product_name VARCHAR(100),
+    category VARCHAR(50),
+    supplier_id VARCHAR(20),
+    supplier_name VARCHAR(100),
+    stock_quantity INT,
+    reorder_level INT,
+    reorder_quantity INT,
+    unit_price DOUBLE,
+    date_received DATE,
+    last_order_date DATE,
+    expiration_date DATE,
+    warehouse_location VARCHAR(100),
+    sales_volume INT,
+    inventory_turnover_rate DOUBLE,
+    status VARCHAR(20)
+);
 """
 
 range_q = "SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;"

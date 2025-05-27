@@ -41,6 +41,68 @@ class FixedLengthRecord:
         
         format_str += '?' # active(1) or delete(0)
         self.format_str = format_str
+    
+    def convert_value(self, value: any, column: Column) -> any:
+        if column.get_att_type_id() == DataTypeTag.CHAR:
+            return str(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.VARCHAR:
+            return str(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.UUID:
+            return str(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.DATE:
+            if isinstance(value, str):
+                parsed_date = datetime.strptime(value, '%m/%d/%Y').date()
+                return (parsed_date - date(1970, 1, 1)).days
+            elif isinstance(value, date):
+                return (value - date(1970, 1, 1)).days
+            elif isinstance(value, datetime):
+                return (value.date() - date(1970, 1, 1)).days
+            else:
+                return int(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.TIME:
+            if isinstance(value, str):
+                parsed_time = datetime.strptime(value, '%H:%M:%S').time()
+                return parsed_time.hour * 3600 + parsed_time.minute * 60 + parsed_time.second
+            elif isinstance(value, time):
+                return value.hour * 3600 + value.minute * 60 + value.second
+            else:
+                return int(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.TIMESTAMP:
+            if isinstance(value, str):
+                try:
+                    parsed_datetime = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    try:
+                        parsed_datetime = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                    except ValueError:
+                        parsed_datetime = datetime.fromisoformat(value)
+                return int(parsed_datetime.timestamp() * 1_000_000)
+            elif isinstance(value, datetime):
+                return int(value.timestamp() * 1_000_000)
+            elif isinstance(value, date):
+                datetime_value = datetime.combine(value, time.min)
+                return int(datetime_value.timestamp() * 1_000_000)
+            else:
+                return int(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.BOOLEAN:
+            if isinstance(value, str):
+                return value.lower() in ('true', '1', 'yes', 'on')
+            else:
+                return bool(value)
+        
+        elif column.get_att_type_id() in (DataTypeTag.SMALLINT, DataTypeTag.INT, DataTypeTag.BIGINT):
+            return int(value)
+        
+        elif column.get_att_type_id() == DataTypeTag.DOUBLE:
+            return float(value)
+        
+        return value
 
     def convert_value_for_packing(self, value: any, column: Column):
         if value is None:
@@ -75,7 +137,7 @@ class FixedLengthRecord:
         
         elif column.get_att_type_id() == DataTypeTag.DATE:
             if isinstance(value, str):
-                parsed_date = datetime.strptime(value, '%Y-%m-%d').date()
+                parsed_date = datetime.strptime(value, '%m/%d/%Y').date()
                 return (parsed_date - date(1970, 1, 1)).days
             elif isinstance(value, date):
                 return (value - date(1970, 1, 1)).days

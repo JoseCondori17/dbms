@@ -87,6 +87,16 @@ class HeapFile:
         self.reader.seek(record_id * self.fixed_length.get_format_size())
         return self.reader.read(self.fixed_length.get_format_size())
 
+    def converto_to_type(self, data_tuple: tuple[any, ...]) -> tuple[any, ...]:
+
+        columns = self.table.get_tab_columns()
+        converted_tuple = []
+        for value, column in zip(data_tuple, columns):
+            converted_value = self.fixed_length.convert_value(value, column)
+            converted_tuple.append(converted_value)
+        return tuple(converted_tuple)
+
+
     def finalize(self):
         self.writer.flush()
 

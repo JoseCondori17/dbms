@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from sqlglot import expressions as exp
 
-from storage.indexing.hashing import ExtendibleHashingFile
 from catalog.catalog_manager import CatalogManager
 from query.parser_sql import (
     get_table_catalog,
@@ -23,6 +22,7 @@ class Insert:
 
         with HeapFile(table, table_path) as heap:
             position = heap.insert(values)
+            values = heap.converto_to_type(values)
             for index, pos_column in indexes.values():
                 index.insert(values[pos_column], position)
 

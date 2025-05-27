@@ -16,6 +16,7 @@ class Copy:
 
         with open(filepath, newline='', encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile)
+            next(reader)
             for row in reader:
                 insert_engine.execute_from_tuple(
                     db_name=db,
