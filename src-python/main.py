@@ -113,9 +113,9 @@ SELECT name FROM geo.public.ciudades
 WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
 """
 
-
+range_q = "SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;"
 admin = PKAdmin()
-admin.execute("SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;")
+admin.execute(range_q)
 
 # admin.execute(database_q)
 # admin.execute(schema_q)

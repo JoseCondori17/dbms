@@ -48,9 +48,29 @@ class HeapFile:
             return None
         return self.fixed_length.unpacking(data_bytes)
 
+    def read_record_json(self, record_id: int) -> dict:
+        record = self.read_record(record_id)
+        if record is None:
+            return None
+            
+        data_tuple, is_active = record
+        if not is_active:
+            return None
+            
+        columns = self.table.get_tab_columns()
+        result = {}
+        
+        for i, column in enumerate(columns):
+            if i < len(data_tuple):
+                result[column.get_att_name()] = data_tuple[i]
+            else:
+                result[column.get_att_name()] = None
+                
+        return result
+
     def read_all_records(self, record_ids: list[int]):
         for record_id in record_ids:
-            yield self.read_record(record_id)
+            yield self.read_record_json(record_id)
 
     def read_at(self, record_id: int) -> bytes:
         self.reader.seek(0, 2)
