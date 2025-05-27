@@ -6,8 +6,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useDbStore } from "@/store/dbStore";
+import { useQuery } from "@tanstack/react-query";
 import { Layers } from "lucide-react";
-import * as React from "react";
 import { buttonVariants } from "./ui/button";
 
 interface Schema {
@@ -63,8 +63,8 @@ function TableColumnsAccordion({ columns }: { columns: TableColumn[] }) {
 function TableIndexesAccordion({ indexes }: { indexes: TableIndex[] }) {
   return (
     <ul className="pl-4 flex flex-col gap-y-1">
-      {indexes.map((idx) => (
-        <li key={idx.idx_id} className="flex justify-between text-xs">
+      {indexes.map((idx, i) => (
+        <li key={idx.idx_id + idx.idx_name + String(i)} className="flex justify-between text-xs">
           <span className="truncate max-w-[120px]">{idx.idx_name}</span>
           <span className="text-muted-foreground ml-2">{idx.idx_type}</span>
         </li>
@@ -80,8 +80,8 @@ function TablesAndIndexes({ tables }: { tables: Table[] }) {
         <AccordionTrigger className="text-sm font-semibold">Tablas</AccordionTrigger>
         <AccordionContent>
           <Accordion type="multiple" className="w-full">
-            {tables.map((table) => (
-              <AccordionItem value={table.tab_name} key={table.tab_id} className="border-b-0">
+            {tables.map((table, idx) => (
+              <AccordionItem value={table.tab_name} key={table.tab_id + String(idx)} className="border-b-0">
                 <AccordionTrigger className="text-xs uppercase font-medium">{table.tab_name}</AccordionTrigger>
                 <AccordionContent>
                   <TableColumnsAccordion columns={table.tab_columns} />
@@ -102,39 +102,30 @@ function TablesAndIndexes({ tables }: { tables: Table[] }) {
 }
 
 function TablesList({ dbName, schemaName }: { dbName: string; schemaName: string }) {
-  const [tables, setTables] = React.useState<Table[]>([]);
-  const [loading, setLoading] = React.useState(false);
   const setTablesStore = useDbStore((state) => state.setTables);
   const selectedSchema = useDbStore((state) => state.selectedSchema);
 
-  React.useEffect(() => {
-    if (!dbName || !schemaName) return;
-    setLoading(true);
-    fetch(`http://127.0.0.1:8000/${dbName}/${schemaName}/tables`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al obtener las tablas");
-        return res.json();
-      })
-      .then((data) => {
-        setTables(data);
-        setTablesStore(data.map((t: Table) => t.tab_name));
-        setLoading(false);
-      })
-      .catch(() => {
-        setTables([]);
-        setTablesStore([]);
-        setLoading(false);
-      });
-  }, [dbName, schemaName, setTablesStore]);
+  const { data: tables = [], isLoading } = useQuery({
+    queryKey: ['tables', dbName, schemaName],
+    queryFn: async () => {
+      if (!dbName || !schemaName) return [];
+      const res = await fetch(`http://127.0.0.1:8000/${dbName}/${schemaName}/tables`);
+      if (!res.ok) throw new Error("Error al obtener las tablas");
+      const data = await res.json();
+      setTablesStore(data.map((t: Table) => t.tab_name));
+      return data;
+    },
+    enabled: !!dbName && !!schemaName && selectedSchema === schemaName
+  });
 
   if (!schemaName || selectedSchema !== schemaName) return null;
 
   return (
     <div className="mt-2">
-      {loading ? (
-        <div className="pl-4 ml-1 text-xs text-muted-foreground">Cargando tablas...</div>
+      {isLoading ? (
+        <div className="pl-4 ml-1 text-xs text-muted-foreground">Loading tables...</div>
       ) : tables.length === 0 ? (
-        <div className="pl-4 ml-1 text-xs text-muted-foreground">No hay tablas</div>
+        <div className="pl-4 ml-1 text-xs text-muted-foreground">Empty</div>
       ) : (
         <TablesAndIndexes tables={tables} />
       )}
@@ -146,38 +137,26 @@ export function NavContain() {
   const selectedDb = useDbStore((state) => state.selectedDb);
   const setSelectedSchema = useDbStore((state) => state.setSelectedSchema);
   const selectedSchema = useDbStore((state) => state.selectedSchema);
-  const [schemas, setSchemas] = React.useState<Schema[]>([]);
-  const [loading, setLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!selectedDb) {
-      setSchemas([]);
-      return;
-    }
-    setLoading(true);
-    fetch(`http://127.0.0.1:8000/${selectedDb}/schemas`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error al obtener los schemas");
-        return res.json();
-      })
-      .then((data) => {
-        setSchemas(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setSchemas([]);
-        setLoading(false);
-      });
-  }, [selectedDb]);
+  const { data: schemas = [], isLoading } = useQuery({
+    queryKey: ['schemas', selectedDb],
+    queryFn: async () => {
+      if (!selectedDb) return [];
+      const res = await fetch(`http://127.0.0.1:8000/${selectedDb}/schemas`);
+      if (!res.ok) throw new Error("Error al obtener los schemas");
+      return res.json();
+    },
+    enabled: !!selectedDb
+  });
 
   return (
     <Accordion type="single" collapsible className="w-full" value={selectedSchema || undefined}>
-      {loading ? (
+      {isLoading ? (
         <div className="p-4 text-xs text-muted-foreground">Cargando schemas...</div>
       ) : schemas.length === 0 ? (
         <div className="p-4 text-xs text-muted-foreground">No hay schemas</div>
       ) : (
-        schemas.map((schema) => (
+        schemas.map((schema: Schema) => (
           <AccordionItem value={schema.sch_name} key={schema.sch_id} className="border-b-0">
             <AccordionTrigger
               className={buttonVariants({

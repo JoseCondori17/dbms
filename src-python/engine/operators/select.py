@@ -38,55 +38,29 @@ class Select:
 
         index_type = index.get_idx_type()
         if plan.condition is None:
-            records = self.call_scan(table, index, path_data, columns[0].get_att_to_type_id())
-            print(records)
-            return
-        elif plan.condition.args['low'] and plan.condition.args['high']:
+            return self.call_scan(table, index, path_data, columns[0].get_att_to_type_id())
+        elif isinstance(plan.condition, exp.Between):
+            plan.condition.args['low'] is not None and plan.condition.args['high']
             low = plan.condition.args['low'].to_py()
             high = plan.condition.args['high'].to_py()
-            records = self.call_scan_range(table, index, path_data, columns[0].get_att_to_type_id(), low, high)
-            print(records)
-            return
-        
-        if index_type == IndexType.BTREE.value:
-            column = columns[index.get_idx_columns()[0]]
-            key: str = plan.condition.expression.to_py()
-            record = self.call_btree(table, index, path_data, column.get_att_to_type_id() ,key)
-            print(record)
-        elif index_type == IndexType.HASH.value:
-            column = columns[index.get_idx_columns()[0]]
-            key: str = plan.condition.expression.to_py()
-            record = self.call_hash(table, index, path_data, column.get_att_to_type_id(), key)
-            print(record)
-        elif index_type == IndexType.ISAM.value:
-            column = columns[index.get_idx_columns()[0]]
-            key: str = plan.condition.expression.to_py()
-            records = self.call_isam()
-            print(records)
-
+            return self.call_scan_range(table, index, path_data, columns[0].get_att_to_type_id(), low, high)
+        elif isinstance(plan.condition, exp.EQ):
+            if index_type == IndexType.BTREE.value:
+                column = columns[index.get_idx_columns()[0]]
+                key: str = plan.condition.expression.to_py()
+                return self.call_btree(table, index, path_data, column.get_att_to_type_id(), key)
+            elif index_type == IndexType.HASH.value:
+                column = columns[index.get_idx_columns()[0]]
+                key: str = plan.condition.expression.to_py()
+                return self.call_hash(table, index, path_data, column.get_att_to_type_id(), key)
+            elif index_type == IndexType.ISAM.value:
+                column = columns[index.get_idx_columns()[0]]
+                key: str = plan.condition.expression.to_py()
+                return self.call_isam()
         elif index_type == IndexType.RTREE.value:
-            heap_file = HeapFile(table, path_data)
-            try:
-                left = plan.condition.this
-                right = plan.condition.expression
+            return self.call_rtree(table, index, path_data, plan.condition)
+        return None
 
-                lat_min = float(left.args["this"].args["this"].name)
-                lat_max = float(left.args["expression"].name)
-                long_min = float(right.args["this"].args["this"].name)
-                long_max = float(right.args["expression"].name)
-
-                from storage.indexing.rtree_wrapper import RTree
-                rtree = RTree(filename=index.get_idx_file())
-
-                results = rtree.range_query((lat_min, long_min, lat_max, long_max))
-                for pos in results:
-                    record, is_active = heap_file.read_record(pos)
-                    if is_active:
-                        print(record)
-
-            except Exception as e:
-                print("Error en la ejecución con RTree:", e)
-        
     def get_index(self, column_name: str, table: Table):
         pos = 0
         for i, column in enumerate(table.get_tab_columns()):
@@ -98,8 +72,33 @@ class Select:
             return indexes[0]
         return indexes[pos]
 
-    def call_hash(self, table: Table, index_obj, data_file, data_type: DataTypeTag, key: str) -> None:
-        idx_path   = index_obj.get_idx_file()
+    def call_rtree(self, table: Table, index_obj, data_file: str, condition: exp.Expression):
+        heap_file = HeapFile(table, data_file)
+        try:
+            left = condition.this
+            right = condition.expression
+
+            lat_min = float(left.args["this"].args["this"].name)
+            lat_max = float(left.args["expression"].name)
+            long_min = float(right.args["this"].args["this"].name)
+            long_max = float(right.args["expression"].name)
+
+            from storage.indexing.rtree_wrapper import RTree
+            rtree = RTree(filename=index_obj.get_idx_file())
+
+            results = rtree.range_query((lat_min, long_min, lat_max, long_max))
+            records = []
+            for pos in results:
+                record = heap_file.read_record_json(pos)
+                if record:
+                    records.append(record)
+            return records
+        except Exception as e:
+            print("Error en la ejecución con RTree:", e)
+            return None
+
+    def call_hash(self, table: Table, index_obj, data_file, data_type: DataTypeTag, key: any) -> dict:
+        idx_path = index_obj.get_idx_file()
         columns = table.get_tab_columns()
         column = columns[index_obj.get_idx_columns()[0]]
         max_key_len: int = column.get_att_len()
@@ -109,15 +108,15 @@ class Select:
             max_key_len=max_key_len,
         )
         heap_file = HeapFile(table, data_file)
-        #hash_file.debug_print_structure()
+        hash_file.debug_print_structure()
         pos = hash_file.search(key)
+        print(f"Pos: {pos}")
         if pos is None:
             return None
-        record = heap_file.read_record(pos)
-        return record
+        return heap_file.read_record_json(pos)
     
-    def call_btree(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, key: str):
-        idx_path   = index_obj.get_idx_file()
+    def call_btree(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, key: any) -> dict:
+        idx_path = index_obj.get_idx_file()
         columns = table.get_tab_columns()
         column = columns[index_obj.get_idx_columns()[0]]
         btree = BPlusTreeFile(
@@ -128,15 +127,14 @@ class Select:
         )
         heap = HeapFile(table, data_file)
         if not key:
-            print("Key is empty, returning None")
             return None
-        pos  = btree.search(key)
-        return None if pos is None else heap.read_record(pos)
+        pos = btree.search(key)
+        return None if pos is None else heap.read_record_json(pos)
 
     def call_isam(): pass
 
-    def call_scan(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag):
-        idx_path   = index_obj.get_idx_file()
+    def call_scan(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag) -> list[dict]:
+        idx_path = index_obj.get_idx_file()
         columns = table.get_tab_columns()
         column = columns[index_obj.get_idx_columns()[0]]
         btree = BPlusTreeFile(
@@ -147,11 +145,10 @@ class Select:
         )
         heap = HeapFile(table, data_file)
         records_id = [id for (_, id) in btree.all_tuples()]
-        for record in heap.read_all_records(records_id):
-            print(record)
+        return list(heap.read_all_records(records_id))
 
-    def call_scan_range(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, start: any, end: any):
-        idx_path   = index_obj.get_idx_file()
+    def call_scan_range(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, start: any, end: any) -> list[dict]:
+        idx_path = index_obj.get_idx_file()
         columns = table.get_tab_columns()
         column = columns[index_obj.get_idx_columns()[0]]
         btree = BPlusTreeFile(
@@ -162,5 +159,4 @@ class Select:
         )
         heap = HeapFile(table, data_file)
         records_id = [id for (_, id) in btree.all_tuples_range(start, end)]
-        for record in heap.read_all_records(records_id):
-            print(record)
+        return list(heap.read_all_records(records_id))

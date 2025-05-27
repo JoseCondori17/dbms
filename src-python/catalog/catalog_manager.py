@@ -191,6 +191,11 @@ class CatalogManager:
         path_tab_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
         return self.file_manager.read_data(path_tab_meta)
 
+    def get_table_json(self, db_name: str, schema_name: str, table_name: str) -> Table:
+        path_tab_meta = self.path_builder.table_meta(db_name, schema_name, table_name)
+        table = self.file_manager.read_data(path_tab_meta)
+        return asdict(table)
+
     def get_tables(self, db_name: str, schema_name: str) -> list[Table]:
         schema_meta: Schema = self.file_manager.read_data(
             self.path_builder.schema_meta(db_name, schema_name)

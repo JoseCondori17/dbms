@@ -8,7 +8,6 @@ export default function Home() {
       <Sidebar />
       <main className="flex-1 w-full">
         {/* <TabFile/> */}
-        
         <CodeEditor/>
       </main>
     </div>    

@@ -122,11 +122,8 @@ class ExtendibleHashingFile:
                 f.write(struct.pack('I', bucket_id))
 
     def _pack_index_record(self, key: any, offset: int) -> bytes:
-        if len(key) > self.max_key_len:
-            key = key[:self.max_key_len]
-        key_bytes = key.encode('utf-8')
-        padded_key = key_bytes.ljust(self.max_key_len, b'\0')
-        return padded_key + struct.pack('I', offset)
+        key_bytes = DataSerializer.serialize(key, self.key_type, self.max_key_len)
+        return key_bytes + struct.pack('I', offset)
 
     def _unpack_index_record(self, record_bytes: bytes) -> tuple[any, int]:
         key_size = DataSerializer.get_size(self.key_type, self.max_key_len)
@@ -180,7 +177,7 @@ class ExtendibleHashingFile:
         key_bytes = DataSerializer.serialize(key, self.key_type, self.max_key_len)
         return xxh64(key_bytes).intdigest()
 
-    def _get_bucket_index(self, key: str) -> int:
+    def _get_bucket_index(self, key: any) -> int:
         hash_value = self._hash_key(key)
         mask = (1 << self.global_depth) - 1
         return hash_value & mask
@@ -237,6 +234,6 @@ class ExtendibleHashingFile:
                 local_depth, records = self._read_bucket(bucket_id)
                 print(f"Bucket {bucket_id}: depth={local_depth}, records={len(records)}")
                 for key, pos in records:
-                    print(f"  {key} -> {pos}")
+                    print(f" {len(key)} {key} -> {pos}")
         except Exception as e:
             print(f"Error en debug: {e}")

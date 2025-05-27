@@ -1,30 +1,26 @@
+import QueryProvider from "@/providers/query-provider";
 import type { Metadata } from "next";
-import { Fira_Code } from 'next/font/google';
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-export const firaCode = Fira_Code({
-  subsets: ['latin'],
-  weight: ['400'],
-  display: 'swap',
-  variable: '--font-fira-code',
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Sonora",
-  description: "Created at None",
+  title: "DBMS",
+  description: "Database Management System",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body
-        className={`${firaCode.variable} antialiased`}
-      >
-        {children}
+      <body className={inter.className}>
+        <QueryProvider>
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@ from engine.executor import PKAdmin
 
 
 create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
-select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Cameron Richardson';"
+select_q = "SELECT name FROM ecm.store.employees WHERE name = 'Valerie Cook';"
 select_q_btr = "SELECT name FROM ecm.store.employees WHERE id = 15;"
 database_q = "CREATE DATABASE ecm"
 schema_q = "CREATE SCHEMA ecm.store"
@@ -115,7 +115,7 @@ WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
 
 range_q = "SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;"
 admin = PKAdmin()
-admin.execute(range_q)
+admin.execute(select_q)
 
 # admin.execute(database_q)
 # admin.execute(schema_q)

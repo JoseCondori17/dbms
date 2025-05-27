@@ -70,9 +70,9 @@ export function DbSwitcher() {
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-        <CommandInput placeholder="Buscar base de datos..." />
+        <CommandInput placeholder="Search database..." />
           <CommandList>
-            <CommandEmpty>{loading ? "Cargando..." : error ? `Error: ${error}` : "No se encontró ninguna base de datos."}</CommandEmpty>
+            <CommandEmpty>{loading ? "Cargando..." : error ? `Error: ${error}` : "Empty"}</CommandEmpty>
             <CommandGroup>
             {databases.map((database) => (
                 <CommandItem
