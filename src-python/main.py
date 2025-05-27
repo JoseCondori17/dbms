@@ -144,13 +144,14 @@ select_query_hash_4 = "SELECT * FROM ecm.store.products WHERE product_name = 'Ca
 ## COMP
 create_index_bptree = "CREATE INDEX idx_product_name ON ecm.store.products USING hash(product_name);"
 select_query_bptree_1 = "SELECT * FROM ecm.store.products_bptree WHERE product_name = 'Sushi Rice';"
-select_query_bptree_3 = "SELECT * FROM ecm.store.products WHERE product_name = 'Gouda Cheese';"
+select_query_bptree_2 = "SELECT * FROM ecm.store.products_bptree WHERE product_name = 'Tilapia';"
+select_query_bptree_3 = "SELECT * FROM ecm.store.products_bptree WHERE product_name = 'Gouda Cheese';"
 select_query_bptree_4 = "SELECT * FROM ecm.store.products_bptree WHERE product_name = 'Carrot';"
 
 range_q = "SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;"
 admin = PKAdmin()
 start_time = time.time()
-admin.execute(select_query_hash_3)
+admin.execute(select_query_bptree_1)
 end_time = time.time()
 print(f"Tiempo de ejecución de la consulta: {(end_time - start_time):.4f} segundos")
 
