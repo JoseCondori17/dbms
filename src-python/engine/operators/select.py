@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from sqlglot import expressions as exp
 from storage.indexing.avl import AVLFile
 from catalog.table import Table
@@ -93,21 +94,30 @@ class Select:
 #         return indexes[0]
 #     return indexes[pos]
 
+
     def get_index(self, column_name: str, table: Table):
-        indexes = table.get_tab_indexes()
+        # 1) posición de la columna buscada
+        pos = self.catalog.get_position_column_by_name(..., column_name)
+        # 2) filtrar solo índices AVL sobre esa posición
+        avl_idxs = [
+            idx for idx in table.get_tab_indexes()
+            if idx.get_idx_type() == IndexType.AVL.value 
+            and idx.get_idx_columns()[0] == pos
+        ]
+        if avl_idxs:
+            return avl_idxs[0]
 
-        print(f"[DEBUG] Buscando índice para columna: '{column_name}'")
-        for index in indexes:
-            col_pos = index.get_idx_columns()[0]
-            column = table.get_tab_columns()[col_pos]
-            print(f"[DEBUG] Verificando índice '{index.get_idx_name()}' en columna '{column.get_att_name()}' (tipo: {index.get_idx_type()})")
-            
-            if column.get_att_name() == column_name:
-                print(f"[DEBUG] ¡Índice encontrado!: {index.get_idx_name()} (tipo {index.get_idx_type()})")
-                return index
+        # 3) fallback a un índice de esa columna (sea BTree, HASH, ISAM...)
+        same_col = [
+            idx for idx in table.get_tab_indexes()
+            if idx.get_idx_columns()[0] == pos
+        ]
+        if same_col:
+            return same_col[0]
 
-        print("[DEBUG] No se encontró índice exacto. Usando el primero si existe.")
-        return indexes[0] if indexes else None
+        # 4) último recurso, la primaria (pk)
+        return table.get_tab_indexes()[0]
+
 
     def call_hash(self, table, index_file, data_file, max_key: int, key: str) -> None:
         hash_file = ExtendibleHashingFile(index_file, max_key)
@@ -135,7 +145,6 @@ class Select:
     
     # AVL Indexing
     def call_avl(self, table: Table, index_obj, data_file: str, plan_condition) -> list:
-
         col_pos = index_obj.get_idx_columns()[0]
         column = table.get_tab_columns()[col_pos]
         key_size = column.get_att_len()
@@ -147,8 +156,8 @@ class Select:
         if plan_condition.__class__.__name__ == "Condition":
             key = str(plan_condition.expression.to_py())
             pos = avl.search(key)
-            print(f"[DEBUG] Buscando key: {key}, posición encontrada: {pos}")
-
+            print(f"[DEBUG] Buscando clave: {key} en AVL")
+            print(f"[DEBUG] Posición devuelta: {pos}")
             return None if pos is None else heap.read_record(pos)
 
         # Búsqueda por rango
@@ -163,4 +172,8 @@ class Select:
                     record = heap.read_record(pos)
                     result.append(record)
             return result
+
         return None
+
+        
+

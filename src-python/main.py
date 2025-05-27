@@ -64,7 +64,9 @@ insert_q = """
 admin.execute(insert_q)
 
 # Crear índice AVL sobre la columna 'id'
-admin.execute("CREATE INDEX idx_id_avl_fix ON ecm.store.employees USING avl(id);")
+admin.execute("CREATE INDEX idx_id_avl_fix_xd ON ecm.store.employees USING avl(id);")
+admin.execute("DELETE FROM ecm.store.employees WHERE id = 15;")
+admin.execute("SELECT name FROM ecm.store.employees WHERE id = 15;")
 
 
 # SELECT por igualdad (debe devolver un registro)

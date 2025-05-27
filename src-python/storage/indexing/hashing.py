@@ -130,11 +130,27 @@ class ExtendibleHashingFile:
         
         return padding_pkey + struct.pack('I', offset)
 
+    #def _unpack_index_record(self, record_bytes: bytes) -> tuple[str, int]:
+       # key_bytes = record_bytes[:self.max_key_size].rstrip(b'\0')
+        #key = key_bytes.decode('utf-8')
+        #offset = struct.unpack('I', record_bytes[self.max_key_size:])[0]
+        #return key, offset
+    
     def _unpack_index_record(self, record_bytes: bytes) -> tuple[str, int]:
-        key_bytes = record_bytes[:self.max_key_size].rstrip(b'\0')
-        key = key_bytes.decode('utf-8')
+        key_bytes = record_bytes[:self.max_key_size]
+
+        # Solución: evitar decodificar basura
+        if key_bytes[0] == 0 or key_bytes == b'\x00' * self.max_key_size:
+            return "", -1  # o cualquier valor que indique entrada vacía
+
+        try:
+            key = key_bytes.rstrip(b'\x00').decode('utf-8')
+        except UnicodeDecodeError:
+            return "", -1  # ignora registros corruptos o vacíos
+
         offset = struct.unpack('I', record_bytes[self.max_key_size:])[0]
         return key, offset
+
 
     def _read_bucket(self, bucket_id: int) -> tuple[int, list[tuple[str, int]]]:
         with open(self.index_filename, 'rb') as f:
