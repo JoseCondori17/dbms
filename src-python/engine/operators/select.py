@@ -49,7 +49,6 @@ class Select:
             key: str = plan.condition.expression.to_py()
             record = self.call_hash(table, index, path_data, column.get_att_to_type_id(), key)
             print(record)
-
         elif index_type == IndexType.ISAM.value:
             column = columns[index.get_idx_columns()[0]]
             key: str = plan.condition.expression.to_py()
@@ -92,12 +91,16 @@ class Select:
 
     def call_hash(self, table: Table, index_obj, data_file, data_type: DataTypeTag, key: str) -> None:
         idx_path   = index_obj.get_idx_file()
+        columns = table.get_tab_columns()
+        column = columns[index_obj.get_idx_columns()[0]]
+        max_key_len: int = column.get_att_len()
         hash_file = ExtendibleHashingFile(
-            index_filename=str(idx_path), 
-            data_type=data_type
+            index_filename=str(idx_path),
+            data_type=data_type,
+            max_key_len=max_key_len,
         )
         heap_file = HeapFile(table, data_file)
-        print(hash_file.get_all_records())
+        #hash_file.debug_print_structure()
         pos = hash_file.search(key)
         if pos is None:
             return None
@@ -106,9 +109,12 @@ class Select:
     
     def call_btree(self, table: Table, index_obj, data_file: str, data_type: DataTypeTag, key: str):
         idx_path   = index_obj.get_idx_file()
+        columns = table.get_tab_columns()
+        column = columns[index_obj.get_idx_columns()[0]]
         btree = BPlusTreeFile(
             index_filename=str(idx_path),
             data_type=data_type,
+            max_key_len=column.get_att_len(),
             order=4
         )
         heap = HeapFile(table, data_file)

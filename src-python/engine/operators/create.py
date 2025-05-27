@@ -168,4 +168,3 @@ class Create:
 
                 elif IndexType[index_type] == IndexType.AVL:
                     pass
-            print(index_type)

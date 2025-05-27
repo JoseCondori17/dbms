@@ -48,6 +48,10 @@ class HeapFile:
             return None
         return self.fixed_length.unpacking(data_bytes)
 
+    def read_all_records(self, record_ids: list[int]):
+        for record_id in record_ids:
+            yield self.read_record(record_id)
+
     def read_at(self, record_id: int) -> bytes:
         self.reader.seek(0, 2)
         file_size = self.reader.tell() // self.fixed_length.get_format_size()
