@@ -98,28 +98,50 @@ class ExtendibleHashingFile:
 
     def _load_header(self):
         with open(self.index_filename, 'rb') as f:
-            header_data = f.read(self.HEADER_SIZE)
-            self.global_depth, self.directory_size, self.bucket_count = struct.unpack('III', header_data)
+            self.global_depth, self.directory_size, self.bucket_count = struct.unpack('III', f.read(self.HEADER_SIZE))
 
     def _save_header(self):
         with open(self.index_filename, 'r+b') as f:
             f.seek(0)
-            f.write(struct.pack('III', self.global_depth, self.directory_size, self.bucket_count))
+            f.write(struct.pack('III',
+                                self.global_depth,
+                                self.directory_size,
+                                self.bucket_count))
+    
+    def _save_header_to_file(self, f):
+        f.seek(0)
+        f.write(struct.pack('III',
+                            self.global_depth,
+                            self.directory_size,
+                            self.bucket_count))
 
     def _read_directory(self) -> list[int]:
         with open(self.index_filename, 'rb') as f:
-            f.seek(self._get_directory_position())
-            directory = []
-            for _ in range(self.directory_size):
-                bucket_id = struct.unpack('I', f.read(4))[0]
-                directory.append(bucket_id)
-            return directory
+            f.seek(self.HEADER_SIZE)
+            return [struct.unpack('I', f.read(4))[0] for _ in range(self.directory_size)]
 
     def _write_directory(self, directory: list[int]):
         with open(self.index_filename, 'r+b') as f:
-            f.seek(self._get_directory_position())
+            f.seek(self.HEADER_SIZE)
             for bucket_id in directory:
                 f.write(struct.pack('I', bucket_id))
+
+    def _write_directory_to_file(self, f, directory: list[int]):
+        f.seek(self.HEADER_SIZE)
+        for bucket_id in directory:
+            f.write(struct.pack('I', bucket_id))
+
+    def _rebuild_file(self,
+                      directory: list[int],
+                      buckets: dict[int, tuple[int, list[tuple[any,int]]]]):
+        with open(self.index_filename, 'r+b') as f:
+            f.truncate(0)
+            self._save_header_to_file(f)
+            self._write_directory_to_file(f, directory)
+            for bucket_id in range(self.bucket_count):
+                local_depth, records = buckets.get(bucket_id, (0, []))
+                f.seek(self._get_bucket_position(bucket_id))
+                self._write_bucket_at_position(f, local_depth, records)
 
     def _pack_index_record(self, key: any, offset: int) -> bytes:
         key_bytes = DataSerializer.serialize(key, self.key_type, self.max_key_len)
@@ -198,22 +220,26 @@ class ExtendibleHashingFile:
         return bucket1_records, bucket2_records
 
     def _expand_directory(self):
-        directory = self._read_directory()
-        new_directory = []
-        for bucket_id in directory:
-            new_directory.append(bucket_id)
-            new_directory.append(bucket_id)
+        old_directory = self._read_directory()
+        buckets = {i: self._read_bucket(i) for i in range(self.bucket_count)}
+
         self.global_depth += 1
-        self.directory_size = len(new_directory)
-        self._save_header()
-        self._write_directory(new_directory)
+        self.directory_size = 1 << self.global_depth
+        new_directory = [
+            old_directory[i % len(old_directory)]
+            for i in range(self.directory_size)
+        ]
+
+        self._rebuild_file(new_directory, buckets)
 
     def _update_directory_after_split(self, old_bucket_id: int, new_bucket_id: int, local_depth: int):
         directory = self._read_directory()
+        high_bit = 1 << (local_depth - 1)
+
         for i in range(len(directory)):
-            if directory[i] == old_bucket_id:
-                if self._get_bit(i, local_depth - 1):
-                    directory[i] = new_bucket_id
+            if directory[i] == old_bucket_id and (i & high_bit):
+                directory[i] = new_bucket_id
+
         self._write_directory(directory)
 
     def _is_file_empty(self) -> bool:

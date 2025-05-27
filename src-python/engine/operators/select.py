@@ -110,7 +110,7 @@ class Select:
         heap_file = HeapFile(table, data_file)
         hash_file.debug_print_structure()
         pos = hash_file.search(key)
-        print(f"Pos: {pos}")
+        #print(heap_file.read_record_json(pos))
         if pos is None:
             return None
         return heap_file.read_record_json(pos)
