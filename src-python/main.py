@@ -1,4 +1,5 @@
 from engine.executor import PKAdmin
+import time
 
 
 create_q = "CREATE TABLE ecm.store.employees (id INT, name VARCHAR(50), salary DECIMAL(10,2))"
@@ -113,6 +114,7 @@ SELECT name FROM geo.public.ciudades
 WHERE latitude BETWEEN -16 AND -12 AND longitude BETWEEN -75 AND -70;
 """
 
+#https://www.kaggle.com/datasets/salahuddinahmedshuvo/grocery-inventory-and-sales-dataset
 inventory = """
 CREATE TABLE products (
     product_id VARCHAR(20),
@@ -133,10 +135,24 @@ CREATE TABLE products (
     status VARCHAR(20)
 );
 """
+create_index_hash = "CREATE INDEX idx_product_name ON ecm.store.products USING hash(product_name);"
+select_query_hash_1 = "SELECT * FROM ecm.store.products WHERE product_name = 'Sushi Rice';"
+select_query_hash_2 = "SELECT * FROM ecm.store.products WHERE product_name = 'Tilapia';"
+select_query_hash_3 = "SELECT * FROM ecm.store.products WHERE product_name = 'Gouda Cheese';"
+select_query_hash_4 = "SELECT * FROM ecm.store.products WHERE product_name = 'Carrot';"
+
+## COMP
+create_index_bptree = "CREATE INDEX idx_product_name ON ecm.store.products USING hash(product_name);"
+select_query_bptree_1 = "SELECT * FROM ecm.store.products_bptree WHERE product_name = 'Sushi Rice';"
+select_query_bptree_3 = "SELECT * FROM ecm.store.products WHERE product_name = 'Gouda Cheese';"
+select_query_bptree_4 = "SELECT * FROM ecm.store.products_bptree WHERE product_name = 'Carrot';"
 
 range_q = "SELECT * FROM ecm.store.employees WHERE id BETWEEN 5 AND 20;"
 admin = PKAdmin()
-admin.execute(select_q)
+start_time = time.time()
+admin.execute(select_query_hash_3)
+end_time = time.time()
+print(f"Tiempo de ejecución de la consulta: {(end_time - start_time):.4f} segundos")
 
 # admin.execute(database_q)
 # admin.execute(schema_q)

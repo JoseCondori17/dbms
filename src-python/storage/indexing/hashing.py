@@ -11,7 +11,7 @@ class ExtendibleHashingFile:
     DIRECTORY_ENTRY_SIZE = 4
     BUCKET_HEADER_SIZE = 12
 
-    def __init__(self, index_filename: str, data_type: DataTypeTag, max_key_len: int, bucket_size: int = 4):
+    def __init__(self, index_filename: str, data_type: DataTypeTag, max_key_len: int, bucket_size: int = 10):
         self.index_filename = index_filename
         self.bucket_size = bucket_size
         self.global_depth = 0

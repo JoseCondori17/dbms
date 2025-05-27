@@ -108,7 +108,7 @@ class Select:
             max_key_len=max_key_len,
         )
         heap_file = HeapFile(table, data_file)
-        hash_file.debug_print_structure()
+        #hash_file.debug_print_structure()
         pos = hash_file.search(key)
         #print(heap_file.read_record_json(pos))
         if pos is None:

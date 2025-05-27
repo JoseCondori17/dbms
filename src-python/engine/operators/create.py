@@ -127,10 +127,10 @@ class Create:
                     max_key_len = column.get_att_len()
                     btree_file = BPlusTreeFile(
                         index_filename=path_index,
-                        max_key_size=data_type,
+                        data_type=data_type,
                         max_key_len=max_key_len,
                         order=4
-                    )                    
+                    )  
                     record_id = 0
                     while True:
                         record_data = heap.read_record(record_id)
