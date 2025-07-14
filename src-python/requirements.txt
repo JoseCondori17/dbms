@@ -4,3 +4,4 @@ xxhash
 
 fastapi[standard]
 rtree
+tabulate

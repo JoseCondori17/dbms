@@ -8,6 +8,7 @@ from storage.indexing.heap import HeapFile
 from storage.indexing.isam import ISAMFile
 from storage.indexing.hashing import ExtendibleHashingFile
 from storage.indexing.bplus_tree import BPlusTreeFile
+from storage.indexing.sequential_file import SequentialFile
 from models.enum.index_enum import IndexType
 from query.parser_sql import (
     get_table_catalog,
@@ -94,7 +95,57 @@ class Create:
         if os.path.getsize(path_data) != 0:
             table = self.catalog.get_table(db_name, schema_name, table_name)
             with HeapFile(table, path_data) as heap:
-                if IndexType[index_type] == IndexType.ISAM:
+                if IndexType[index_type] == IndexType.SEQUENTIAL:
+                    print(f"🔥 DEBUG: Creating Sequential File index for {table_name}")
+                    # Create Sequential File for existing table data
+                    column: Column = table.get_tab_columns()[index_column]
+                    data_type = column.get_att_to_type_id()
+                    max_key_len = column.get_att_len()
+                    
+                    # Create schema for Sequential File
+                    table_columns = table.get_tab_columns()
+                    schema = {}
+                    max_lengths = {}
+                    
+                    for col in table_columns:
+                        col_name = col.get_att_name()
+                        col_type = col.get_att_to_type_id()
+                        schema[col_name] = col_type
+                        if col.get_att_len() > 0:
+                            max_lengths[col_name] = col.get_att_len()
+                    
+                    # Use CSV file with .csv extension for Sequential File
+                    base_path = str(path_index).replace('.dat', '')
+                    seq_path = f"{base_path}.csv"
+                    print(f"🔥 DEBUG: path_index = {path_index}")
+                    print(f"🔥 DEBUG: seq_path = {seq_path}")
+                    seq_file = SequentialFile(
+                        filename=seq_path,
+                        schema=schema,
+                        key_field=column.get_att_name(),
+                        max_lengths=max_lengths
+                    )
+                    
+                    # Insert all existing records
+                    record_id = 0
+                    records_inserted = 0
+                    while True:
+                        record_data = heap.read_record(record_id)
+                        if record_data is None:
+                            break
+                        data_tuple, is_active = record_data
+                        if is_active:
+                            # Create record dictionary
+                            record = {}
+                            for i, col in enumerate(table_columns):
+                                record[col.get_att_name()] = data_tuple[i]
+                            seq_file.insert(record)
+                            records_inserted += 1
+                        record_id += 1
+                    print(f"🔥 DEBUG: Inserted {records_inserted} records into Sequential File")
+                
+                elif IndexType[index_type] == IndexType.ISAM:
+                    print(f"🔥 DEBUG: Creating ISAM index for {table_name}")
                     block_factor = 10                    
                     column: Column = table.get_tab_columns()[index_column]
                     data_type = column.get_att_to_type_id()
@@ -115,13 +166,15 @@ class Create:
                         data_tuple, is_active = record_data
                         if is_active:
                             key = data_tuple[index_column]
-                            if records_processed % block_factor == 0:
-                                logical_position = records_processed // block_factor
-                                isam_file.insert(key, logical_position)
+                            print(f"🔥 DEBUG: ISAM inserting key={key}, record_id={record_id}")
+                            isam_file.insert(key, record_id)  # Use record_id instead of logical_position
                             records_processed += 1
                         record_id += 1
+                    
+                    print(f"🔥 DEBUG: ISAM inserted {records_processed} records")
 
                 elif IndexType[index_type] == IndexType.BTREE:
+                    print(f"🔥 DEBUG: Creating B+Tree index for {table_name}")
                     column: Column = table.get_tab_columns()[index_column]
                     data_type = column.get_att_to_type_id()
                     max_key_len = column.get_att_len()
@@ -132,6 +185,7 @@ class Create:
                         order=4
                     )  
                     record_id = 0
+                    records_inserted = 0
                     while True:
                         record_data = heap.read_record(record_id)
                         if record_data is None:
@@ -139,8 +193,12 @@ class Create:
                         data_tuple, is_active = record_data
                         if is_active:
                             key = data_tuple[index_column]
+                            print(f"🔥 DEBUG: B+Tree inserting key={key}, record_id={record_id}")
                             btree_file.insert(key, record_id)
+                            records_inserted += 1
                         record_id += 1
+                    
+                    print(f"🔥 DEBUG: B+Tree inserted {records_inserted} records")
 
                 elif IndexType[index_type] == IndexType.HASH:
                     column: Column = table.get_tab_columns()[index_column]

@@ -117,12 +117,12 @@ class ISAMFile:
             header_data = f.read(self.BLOCK_HEADER_SIZE)
             if len(header_data) < self.BLOCK_HEADER_SIZE:
                 return 0, 0, -1
-            return struct.unpack('III', header_data)
+            return struct.unpack('iii', header_data)
     
     def _read_index_block(self, block_id: int) -> tuple[list[tuple[any, int]], int]:
         with open(self.index_filename, 'rb') as f:
             f.seek(self._get_block_position(block_id))            
-            _, record_count, next_overflow = struct.unpack('III', f.read(self.BLOCK_HEADER_SIZE))
+            _, record_count, next_overflow = struct.unpack('iii', f.read(self.BLOCK_HEADER_SIZE))
             
             records = []
             for _ in range(record_count):
@@ -139,7 +139,7 @@ class ISAMFile:
     def _read_leaf_block(self, block_id: int) -> tuple[list[tuple[any, int]], int]:
         with open(self.index_filename, 'rb') as f:
             f.seek(self._get_block_position(block_id))
-            _, record_count, next_overflow = struct.unpack('III', f.read(self.BLOCK_HEADER_SIZE))
+            _, record_count, next_overflow = struct.unpack('iii', f.read(self.BLOCK_HEADER_SIZE))
             
             records = []
             for _ in range(record_count):
@@ -154,7 +154,8 @@ class ISAMFile:
             return records, next_overflow
     
     def _write_index_block(self, f, level: int, records: list[tuple[any, int]], next_overflow: int = -1):
-        f.write(struct.pack('III', level, len(records), next_overflow))
+        # Use signed integers to handle -1 values
+        f.write(struct.pack('iii', level, len(records), next_overflow))
         for key, block_pointer in records:
             record_data = self._pack_index_record(key, block_pointer)
             f.write(record_data)
@@ -164,7 +165,8 @@ class ISAMFile:
             f.write(b'\0' * self.record_size)
     
     def _write_leaf_block(self, f, level: int, records: list[tuple[any, int]], next_overflow: int = -1):
-        f.write(struct.pack('III', level, len(records), next_overflow))        
+        # Use signed integers to handle -1 values
+        f.write(struct.pack('iii', level, len(records), next_overflow))        
         for key, data_offset in records:
             record_data = self._pack_data_record(key, data_offset)
             f.write(record_data)

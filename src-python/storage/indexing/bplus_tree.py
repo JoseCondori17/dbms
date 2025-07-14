@@ -209,8 +209,16 @@ class BPlusTreeFile:
         leaf_node = self._read_node(leaf_node_id)
         
         for i, existing_key in enumerate(leaf_node.keys):
-            if existing_key == key:
-                return leaf_node.data_positions[i]
+            # Convert both to float for comparison to handle Decimal vs float
+            try:
+                existing_key_float = float(existing_key)
+                search_key_float = float(key)
+                if existing_key_float == search_key_float:
+                    return leaf_node.data_positions[i]
+            except (ValueError, TypeError):
+                # Fallback to direct comparison
+                if existing_key == key:
+                    return leaf_node.data_positions[i]
         
         return None
     
@@ -311,11 +319,21 @@ class BPlusTreeFile:
             
             child_index = 0
             for i, node_key in enumerate(node.keys):
-                if key < node_key:
-                    break
+                try:
+                    # Convert both to float for comparison
+                    key_float = float(key)
+                    node_key_float = float(node_key)
+                    if key_float < node_key_float:
+                        break
+                except (ValueError, TypeError):
+                    # Fallback to direct comparison
+                    if key < node_key:
+                        break
                 child_index = i + 1
             
-            if child_index >= len(node.pointers) or node.pointers[child_index] == 0:
+            if child_index >= len(node.pointers):
+                child_index = len(node.pointers) - 1
+            elif node.pointers[child_index] == -1:
                 child_index = len(node.pointers) - 1
                 
             if child_index < 0 or child_index >= len(node.pointers):
@@ -526,3 +544,26 @@ class BPlusTreeFile:
                 pass
             return True
         return os.path.getsize(self.index_filename) == 0
+    
+    def _debug_print_tree(self):
+        """Print the entire tree structure for debugging"""
+        print("🌳 DEBUG: === TREE STRUCTURE ===")
+        print(f"🌳 DEBUG: Root: {self.root_node_id}, Node count: {self.node_count}, Height: {self.height}")
+        
+        if self.root_node_id == -1:
+            print("🌳 DEBUG: Empty tree")
+            return
+            
+        for node_id in range(self.node_count):
+            try:
+                node = self._read_node(node_id)
+                node_type = "LEAF" if node.is_leaf else "INTERNAL"
+                print(f"🌳 DEBUG: Node {node_id} ({node_type}): keys={node.keys}")
+                if node.is_leaf:
+                    print(f"🌳 DEBUG:   data_positions={node.data_positions}")
+                    print(f"🌳 DEBUG:   next_leaf={node.next_leaf}")
+                else:
+                    print(f"🌳 DEBUG:   pointers={node.pointers}")
+            except Exception as e:
+                print(f"🌳 DEBUG: Error reading node {node_id}: {e}")
+        print("🌳 DEBUG: === END TREE STRUCTURE ===")

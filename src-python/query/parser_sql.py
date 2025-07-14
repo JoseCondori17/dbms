@@ -6,6 +6,7 @@ from sqlglot.expressions import (
     Identifier, 
     DataType, 
     Literal,
+    Boolean,
     Tuple,
     Var,
     IndexParameters,
@@ -77,9 +78,15 @@ def get_values(expr: Expression) -> list[Tuple]:
 
 def to_tuple(expr: Expression) -> tuple:
     values = []
+    
+    # Get all Literal and Boolean expressions from the tuple
     for value in expr.find_all(Literal):
         if value.this:
             values.append(value.to_py())
+    
+    for value in expr.find_all(Boolean):
+        values.append(value.to_py())
+    
     return tuple(values)
 
 def get_identifier(expr: Expression):
