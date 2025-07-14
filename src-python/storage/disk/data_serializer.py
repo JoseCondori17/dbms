@@ -89,12 +89,22 @@ class DataSerializer:
             return None
             
         if data_type == DataTypeTag.SMALLINT:
+            if len(data) < 2:
+                data = data + b'\x00' * (2 - len(data))
             return struct.unpack('h', data[:2])[0]
         elif data_type == DataTypeTag.INT:
+            if len(data) < 4:
+                data = data + b'\x00' * (4 - len(data))
             return struct.unpack('i', data[:4])[0]
         elif data_type == DataTypeTag.BIGINT:
+            if len(data) < 8:
+                data = data + b'\x00' * (8 - len(data))
             return struct.unpack('q', data[:8])[0]
         elif data_type == DataTypeTag.DOUBLE:
+            if len(data) < 8:
+                print(f"⚠️  WARNING: Expected 8 bytes for DOUBLE, got {len(data)} bytes")
+                # Pad with zeros if not enough data
+                data = data + b'\x00' * (8 - len(data))
             return struct.unpack('d', data[:8])[0]
         elif data_type == DataTypeTag.CHAR:
             if max_len == 0:

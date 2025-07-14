@@ -4,6 +4,7 @@ import { CodeiumEditor } from '@codeium/react-code-editor';
 import { Play } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
+import { ResultsDisplay } from './ResultsDisplay';
 
 interface QueryResult {
   [key: string]: unknown;
@@ -100,25 +101,7 @@ export function CodeEditor() {
         />
       </div>
 
-      <div className="flex-1 p-4 bg-white">
-        <p className="text-gray-600">Results</p>
-        <div className="mt-2">
-          {error && (
-            <div className="text-red-500 mb-4">
-              {error}
-            </div>
-          )}
-          {loading ? (
-            <div className="text-gray-500">Loading...</div>
-          ) : results ? (
-            <pre className="bg-gray-50 p-4 rounded overflow-auto">
-              {JSON.stringify(results, null, 2)}
-            </pre>
-          ) : (
-            <div className="text-gray-500">No results to display</div>
-          )}
-        </div>
-      </div>
+      <ResultsDisplay results={results} loading={loading} error={error} />
     </div>
   );
 }

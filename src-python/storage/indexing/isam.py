@@ -60,6 +60,61 @@ class ISAMFile:
         
         return self._search_in_overflow_chain(leaf_block_id, key)
     
+    def range_search(self, start_key: any, end_key: any) -> list[int]:
+        """Search for all records within a key range"""
+        print(f"🔍 DEBUG: ISAM.range_search called with start_key={start_key}, end_key={end_key}")
+        
+        if start_key == float('-inf'):
+            start_key = None
+        if end_key == float('inf'):
+            end_key = None
+            
+        print(f"🔍 DEBUG: After inf conversion - start_key={start_key}, end_key={end_key}")
+        
+        results = []
+        
+        # Iterate through all blocks to find records in range
+        print(f"🔍 DEBUG: Iterating through {self.total_blocks} blocks")
+        for block_id in range(self.total_blocks):
+            try:
+                records, next_overflow = self._read_leaf_block(block_id)
+                print(f"🔍 DEBUG: Block {block_id} has {len(records)} records")
+                for key, position in records:
+                    print(f"🔍 DEBUG: Checking record key={key}, position={position}")
+                    # Check if key is within range
+                    if start_key is not None and key < start_key:
+                        print(f"🔍 DEBUG: Skipping key={key} < start_key={start_key}")
+                        continue
+                    if end_key is not None and key > end_key:
+                        print(f"🔍 DEBUG: Skipping key={key} > end_key={end_key}")
+                        continue
+                    print(f"🔍 DEBUG: Adding key={key}, position={position} to results")
+                    results.append(position)
+                
+                # Also check overflow chains
+                overflow_id = next_overflow
+                while overflow_id != -1:
+                    overflow_records, next_overflow = self._read_leaf_block(overflow_id)
+                    for key, position in overflow_records:
+                        if start_key is not None and key < start_key:
+                            continue
+                        if end_key is not None and key > end_key:
+                            continue
+                        results.append(position)
+                    overflow_id = next_overflow
+                    
+            except Exception as e:
+                # Skip invalid blocks
+                print(f"🔍 DEBUG: Exception in block {block_id}: {e}")
+                continue
+        
+        print(f"🔍 DEBUG: ISAM.range_search returning {len(results)} results: {results}")
+        return results
+    
+    def all_records(self) -> list[int]:
+        """Get all record positions"""
+        return self.range_search(float('-inf'), float('inf'))
+    
     # helper functions
     def _initialize_file(self):
         with open(self.index_filename, 'wb') as f:

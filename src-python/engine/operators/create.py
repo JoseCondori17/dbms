@@ -72,7 +72,12 @@ class Create:
         schema_name: str = get_table_schema(expr)
         table_name: str = get_table_name(expr)
         index_name: str = get_name(expr)
-        index_type: str = get_index_type(expr).upper()
+        index_type: str = get_index_type(expr)
+        if index_type is None:
+            # Default to B+Tree if no type specified
+            index_type = "BTREE"
+        else:
+            index_type = index_type.upper()
         column_name: str = get_column_name(expr).lower()
         index_column = self.catalog.get_position_column_by_name(
             db_name,
@@ -146,10 +151,13 @@ class Create:
                 
                 elif IndexType[index_type] == IndexType.ISAM:
                     print(f"🔥 DEBUG: Creating ISAM index for {table_name}")
+                    print(f"🔥 DEBUG: index_column={index_column}, column_name={column_name}")
                     block_factor = 10                    
                     column: Column = table.get_tab_columns()[index_column]
                     data_type = column.get_att_to_type_id()
                     max_key_len = column.get_att_len()
+                    print(f"🔥 DEBUG: data_type={data_type}, max_key_len={max_key_len}")
+                    print(f"🔥 DEBUG: path_index={path_index}")
                     isam_file = ISAMFile(
                         index_filename=path_index, 
                         data_type=data_type,
@@ -159,6 +167,7 @@ class Create:
                     record_id = 0
                     records_processed = 0
                     
+                    print(f"🔥 DEBUG: Starting to process records...")
                     while True:
                         record_data = heap.read_record(record_id)
                         if record_data is None:

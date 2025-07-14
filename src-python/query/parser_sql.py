@@ -19,7 +19,33 @@ from catalog.column import Column
 from models.enum.data_type_enum import DataTypeTag, DataTypeSize
 
 def parser_sql(query: str) -> list[Expression]:
-    return parse(query, dialect=Postgres)
+    # Pre-process the query to handle USING clauses that SQLglot doesn't support
+    processed_query = preprocess_index_syntax(query)
+    return parse(processed_query, dialect=Postgres)
+
+def preprocess_index_syntax(query: str) -> str:
+    """
+    Pre-process CREATE INDEX statements to handle USING clauses that SQLglot doesn't support.
+    This temporarily removes the USING clause and stores it for later extraction.
+    """
+    import re
+    
+    # Pattern to match CREATE INDEX with USING clause
+    # Handle both USING type(column) and USING type formats
+    pattern = r'(CREATE\s+INDEX\s+\w+\s+ON\s+[\w.]+\s*\([^)]+\))\s+USING\s+(\w+)(?:\([^)]+\))?'
+    
+    def replace_using_clause(match):
+        # Extract the main CREATE INDEX part and the index type
+        create_part = match.group(1)
+        index_type = match.group(2).upper()
+        
+        # Store the index type in a comment that we can parse later
+        return f"{create_part} /* INDEX_TYPE:{index_type} */"
+    
+    # Replace USING clauses with comments
+    processed = re.sub(pattern, replace_using_clause, query, flags=re.IGNORECASE)
+    
+    return processed
 
 def get_name(expr: Expression) -> str:
     return expr.this.name
@@ -95,13 +121,51 @@ def get_identifier(expr: Expression):
 
 def get_index_type(expr: Expression) -> str:
     params = expr.find(IndexParameters)
-    index = params.find(Var)
-    return index.name if index else None
+    if params:
+        index = params.find(Var)
+        if index:
+            return index.name
+    
+    # Extract index type from preprocessed comment
+    if hasattr(expr, 'sql') and expr.sql:
+        sql_str = expr.sql()
+        import re
+        match = re.search(r'/\*\s*INDEX_TYPE:(\w+)\s*\*/', sql_str)
+        if match:
+            return match.group(1)
+    
+    # Fallback: try to extract from raw SQL if IndexParameters not found
+    # This handles cases where SQLglot doesn't parse USING clause correctly
+    if hasattr(expr, 'sql') and expr.sql:
+        sql_str = expr.sql().upper()
+        if 'USING HASH' in sql_str:
+            return 'HASH'
+        elif 'USING BTREE' in sql_str:
+            return 'BTREE'
+        elif 'USING ISAM' in sql_str:
+            return 'ISAM'
+        elif 'USING SEQUENTIAL' in sql_str:
+            return 'SEQUENTIAL'
+        elif 'USING RTREE' in sql_str:
+            return 'RTREE'
+    
+    return None
 
 def get_column_name(expr: Expression) -> str:
     params = expr.find(IndexParameters)
-    identifier = params.find(Identifier)
-    return identifier.name if identifier else None
+    if params:
+        identifier = params.find(Identifier)
+        if identifier:
+            return identifier.name
+    
+    # Fallback: extract column name from the index expression
+    # Look for the column specification in the CREATE INDEX statement
+    if hasattr(expr, 'expressions') and expr.expressions:
+        for exp in expr.expressions:
+            if hasattr(exp, 'this') and hasattr(exp.this, 'name'):
+                return exp.this.name
+    
+    return None
 
 def get_copy_info(expr: Expression):
     table = expr.find(Table)

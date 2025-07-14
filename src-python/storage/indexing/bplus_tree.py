@@ -5,6 +5,36 @@ from typing import List, Tuple, Optional, Dict, Any
 from models.enum.data_type_enum import DataTypeTag
 from storage.disk.data_serializer import DataSerializer
 
+def _safe_key_compare(key1: Any, key2: Any) -> int:
+    """
+    Safe comparison function that handles different data types
+    Returns: -1 if key1 < key2, 0 if equal, 1 if key1 > key2
+    """
+    try:
+        # Try numeric comparison first
+        k1_float = float(key1)
+        k2_float = float(key2)
+        if k1_float < k2_float:
+            return -1
+        elif k1_float > k2_float:
+            return 1
+        else:
+            return 0
+    except (ValueError, TypeError):
+        # Fallback to string comparison
+        try:
+            k1_str = str(key1)
+            k2_str = str(key2)
+            if k1_str < k2_str:
+                return -1
+            elif k1_str > k2_str:
+                return 1
+            else:
+                return 0
+        except (TypeError):
+            # If all else fails, consider them equal
+            return 0
+
 class TreeNode:
     def __init__(self, is_leaf: bool, parent_id: int = -1):
         self.is_leaf = is_leaf
@@ -248,8 +278,9 @@ class BPlusTreeFile:
         if self.root_node_id == -1:
             return []
 
+        # Find the starting leaf node
         current_node_id = self.root_node_id
-        while True:
+        while current_node_id != -1:
             node = self._read_node(current_node_id)
             if node.is_leaf:
                 break
@@ -259,8 +290,9 @@ class BPlusTreeFile:
                     break
                 child_index = i + 1
             current_node_id = node.pointers[child_index] if child_index < len(node.pointers) else -1
-            if current_node_id == -1:
-                return []
+
+        if current_node_id == -1:
+            return []
 
         result = []
         while current_node_id != -1:
@@ -270,7 +302,7 @@ class BPlusTreeFile:
                     return result
                 if start <= key <= end:
                     result.append((key, data_pos))
-            current_node_id = node.next_leaf
+            current_node_id = node.next_leaf if hasattr(node, 'next_leaf') and node.next_leaf != -1 else -1
 
         return result
 
@@ -319,16 +351,10 @@ class BPlusTreeFile:
             
             child_index = 0
             for i, node_key in enumerate(node.keys):
-                try:
-                    # Convert both to float for comparison
-                    key_float = float(key)
-                    node_key_float = float(node_key)
-                    if key_float < node_key_float:
-                        break
-                except (ValueError, TypeError):
-                    # Fallback to direct comparison
-                    if key < node_key:
-                        break
+                # Use safe comparison function
+                comparison = _safe_key_compare(key, node_key)
+                if comparison < 0:  # key < node_key
+                    break
                 child_index = i + 1
             
             if child_index >= len(node.pointers):
@@ -429,7 +455,7 @@ class BPlusTreeFile:
                 self._save_header()
     
     def _read_node(self, node_id: int) -> TreeNode:
-        if node_id is None or node_id < 0:
+        if node_id is None or node_id < 0 or node_id == 0xFFFFFFFF:
             raise ValueError(f"node_id inválido: {node_id}")
             
         with open(self.index_filename, 'rb') as f:
