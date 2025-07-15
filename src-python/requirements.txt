@@ -1,7 +1,14 @@
 sqlglot[rs]
 pytest
 xxhash
-
 fastapi[standard]
 rtree
 tabulate
+
+# Proyecto 2 dependencies
+numpy
+pandas
+scikit-learn==1.3.2
+librosa
+nltk
+kaggle
